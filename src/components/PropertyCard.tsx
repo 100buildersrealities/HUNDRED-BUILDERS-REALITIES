@@ -14,7 +14,8 @@ import {
   MessageSquare,
   CalendarCheck,
   Award,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import { Property, AuthUser } from '../types';
 import { Language, translations } from '../data/translations';
@@ -32,6 +33,7 @@ interface PropertyCardProps {
   viewMode?: 'grid' | 'list';
   authUser?: AuthUser | null;
   onDeleteProperty?: (property: Property) => void;
+  onEditProperty?: (property: Property) => void;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -46,6 +48,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   viewMode = 'grid',
   authUser,
   onDeleteProperty,
+  onEditProperty,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const t = translations[lang];
@@ -374,6 +377,20 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <Phone className="w-4 h-4" />
           </button>
 
+          {isOwned && onEditProperty && (
+            <button
+              id={`edit-btn-${property.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditProperty(property);
+              }}
+              className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95 shadow-2xs"
+              title={isIndic ? 'प्रॉपर्टी में बदलाव करें (फोटो, कीमत, साइज)' : 'Edit Property Details'}
+            >
+              <Pencil className="w-4 h-4 text-amber-700" />
+            </button>
+          )}
+
           {isOwned && onDeleteProperty && (
             <button
               id={`delete-btn-${property.id}`}
@@ -381,7 +398,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 e.stopPropagation();
                 onDeleteProperty(property);
               }}
-              className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center justify-center shrink-0"
+              className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
               title={isIndic ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}
             >
               <Trash2 className="w-4 h-4 text-rose-600" />

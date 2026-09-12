@@ -36,7 +36,8 @@ import {
   Tractor,
   Ruler,
   Shield,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import { Property, AuthUser } from '../types';
 import { Language, translations, amenitiesList } from '../data/translations';
@@ -53,6 +54,7 @@ interface PropertyDetailModalProps {
   onBookVisit: (property: Property) => void;
   authUser?: AuthUser | null;
   onDeleteProperty?: (property: Property) => void;
+  onEditProperty?: (property: Property) => void;
 }
 
 export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
@@ -66,6 +68,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   onBookVisit,
   authUser,
   onDeleteProperty,
+  onEditProperty,
 }) => {
   if (!property) return null;
 
@@ -197,6 +200,18 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               <Heart className={`w-4 h-4 ${isShortlisted ? 'fill-current' : ''}`} />
             </button>
 
+            {isOwned && onEditProperty && (
+              <button
+                id="detail-modal-edit-top-btn"
+                onClick={() => onEditProperty(property)}
+                className="p-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition cursor-pointer flex items-center space-x-1.5 active:scale-95 shadow-2xs"
+                title={isIndic ? 'प्रॉपर्टी में बदलाव करें (फोटो, कीमत, साइज)' : 'Edit Property Details'}
+              >
+                <Pencil className="w-4 h-4 text-amber-700" />
+                <span className="text-xs font-black">{isIndic ? 'बदलाव करें' : 'Edit'}</span>
+              </button>
+            )}
+
             {isOwned && onDeleteProperty && (
               <button
                 id="detail-modal-delete-top-btn"
@@ -224,7 +239,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
 
           {/* Logged-In User Ownership Banner */}
           {isOwned && (
-            <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-orange-50 rounded-2xl p-4 border border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-orange-50 rounded-2xl p-4 sm:p-5 border border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
               <div className="flex items-center space-x-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
                   ✓
@@ -236,23 +251,36 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                       {isIndic ? 'लिस्टिंग कर्ता' : 'Creator'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 mt-0.5">
+                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
                     {isIndic 
-                      ? 'आप इस प्रॉपर्टी के पंजीकृत लिस्टिंग कर्ता हैं। यदि यह प्रॉपर्टी बिक चुकी है या आप इसे हटाना चाहते हैं, तो आप इसे यहाँ से हटा सकते हैं।' 
-                      : 'You are the registered creator of this listing. You can permanently delete this property whenever you wish.'}
+                      ? 'आप इस प्रॉपर्टी के अधिकृत लिस्टिंग कर्ता हैं। आप किसी भी समय फोटो हटाने/जोड़ने, कीमत या साइज में बदलाव कर सकते हैं, या लिस्टिंग हटा सकते हैं।' 
+                      : 'You are the registered creator of this listing. You can update photos, price, size, description, or delete this property.'}
                   </p>
                 </div>
               </div>
-              {onDeleteProperty && (
-                <button
-                  id="detail-modal-banner-delete-btn"
-                  onClick={() => onDeleteProperty(property)}
-                  className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white rounded-xl text-xs font-black flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-md shadow-rose-600/20 active:scale-95 shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>{isIndic ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}</span>
-                </button>
-              )}
+              
+              <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0 flex-wrap sm:flex-nowrap">
+                {onEditProperty && (
+                  <button
+                    id="detail-modal-banner-edit-btn"
+                    onClick={() => onEditProperty(property)}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 rounded-xl text-xs font-black flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-md shadow-amber-500/20 active:scale-95"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span>{isIndic ? 'बदलाव करें (एडिट)' : 'Edit Details'}</span>
+                  </button>
+                )}
+                {onDeleteProperty && (
+                  <button
+                    id="detail-modal-banner-delete-btn"
+                    onClick={() => onDeleteProperty(property)}
+                    className="flex-1 sm:flex-none px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-black flex items-center justify-center space-x-1.5 transition cursor-pointer active:scale-95"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                    <span>{isIndic ? 'डिलीट करें' : 'Delete'}</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
           
@@ -976,6 +1004,18 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               >
                 <Phone className="w-4 h-4" />
               </button>
+
+              {isOwned && onEditProperty && (
+                <button
+                  id="modal-bottom-edit-cta"
+                  onClick={() => onEditProperty(property)}
+                  className="px-4 py-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-xs transition cursor-pointer shadow-xs flex items-center space-x-1.5 active:scale-95"
+                  title={isIndic ? 'प्रॉपर्टी में बदलाव करें (फोटो, कीमत, साइज)' : 'Edit Property'}
+                >
+                  <Pencil className="w-4 h-4 text-amber-700" />
+                  <span>{isIndic ? 'बदलाव करें' : 'Edit'}</span>
+                </button>
+              )}
 
               {isOwned && onDeleteProperty && (
                 <button

@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Home,
   ShieldCheck,
-  Award
+  Award,
+  Pencil
 } from 'lucide-react';
 import { Property, AuthUser } from '../types';
 import { Language } from '../data/translations';
@@ -24,6 +25,7 @@ interface MyListingsModalProps {
   properties: Property[];
   authUser: AuthUser | null;
   onSelectProperty: (property: Property) => void;
+  onEditProperty: (property: Property) => void;
   onRequestDelete: (property: Property) => void;
   onOpenPostProperty: () => void;
   lang: Language;
@@ -35,6 +37,7 @@ export const MyListingsModal: React.FC<MyListingsModalProps> = ({
   properties,
   authUser,
   onSelectProperty,
+  onEditProperty,
   onRequestDelete,
   onOpenPostProperty,
   lang,
@@ -233,7 +236,7 @@ export const MyListingsModal: React.FC<MyListingsModalProps> = ({
                     </div>
 
                     {/* Right: Actions */}
-                    <div className="flex items-center space-x-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <div className="flex items-center space-x-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 flex-wrap sm:flex-nowrap gap-y-1.5">
                       <button
                         type="button"
                         onClick={() => {
@@ -245,6 +248,21 @@ export const MyListingsModal: React.FC<MyListingsModalProps> = ({
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>{isHi ? 'विवरण' : 'View'}</span>
+                      </button>
+
+                      {/* Prominent Edit / Update Button */}
+                      <button
+                        id={`btn-edit-listing-${prop.id}`}
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onEditProperty(prop);
+                        }}
+                        className="flex-1 sm:flex-none px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 hover:text-amber-950 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 cursor-pointer active:scale-95 shadow-xs"
+                        title={isHi ? 'प्रॉपर्टी में बदलाव करें (फोटो, कीमत, साइज)' : 'Edit Property Details (Photos, Price, Size)'}
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-amber-700" />
+                        <span>{isHi ? 'बदलाव करें' : 'Edit'}</span>
                       </button>
 
                       {/* Prominent Delete Button */}

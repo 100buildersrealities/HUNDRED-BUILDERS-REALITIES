@@ -152,6 +152,7 @@ export default function App() {
   const [isAdPackagesOpen, setIsAdPackagesOpen] = useState(false);
   const [isMyListingsOpen, setIsMyListingsOpen] = useState(false);
   const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -281,8 +282,35 @@ export default function App() {
   const handleAddProperty = (newProp: Property) => {
     setProperties((prev) => [newProp, ...prev]);
     setIsPostPropertyOpen(false);
+    setEditingProperty(null);
     showToast(t.listingSuccessMsg);
     setSelectedProperty(newProp);
+  };
+
+  const handleEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    setIsPostPropertyOpen(true);
+  };
+
+  const handleClosePostProperty = () => {
+    setIsPostPropertyOpen(false);
+    setEditingProperty(null);
+  };
+
+  const handleUpdateProperty = (updatedProp: Property) => {
+    setProperties((prev) => prev.map(p => p.id === updatedProp.id ? updatedProp : p));
+    if (selectedProperty?.id === updatedProp.id) {
+      setSelectedProperty(updatedProp);
+    }
+    setEditingProperty(null);
+    setIsPostPropertyOpen(false);
+
+    const propName = lang === 'hi' ? updatedProp.titleHi : updatedProp.title;
+    showToast(
+      lang === 'hi'
+        ? `लिस्टिंग "${propName}" में फोटो, कीमत, साइज व सभी बदलाव सफलतापूर्वक सहेज लिए गए हैं!`
+        : `Listing "${propName}" has been successfully updated with photos, price, and size changes!`
+    );
   };
 
   const handleConfirmBooking = (booking: SiteVisitBooking) => {
@@ -685,6 +713,7 @@ export default function App() {
                     viewMode={viewMode}
                     authUser={authUser}
                     onDeleteProperty={handleRequestDeleteProperty}
+                    onEditProperty={handleEditProperty}
                   />
                 ))}
               </div>
@@ -767,6 +796,7 @@ export default function App() {
         onToggleCompare={handleToggleCompare}
         authUser={authUser}
         onDeleteProperty={handleRequestDeleteProperty}
+        onEditProperty={handleEditProperty}
         onBookVisit={(p) => {
           setSelectedProperty(null);
           setInquiryProperty(p);
@@ -779,13 +809,15 @@ export default function App() {
         onClose={() => setIsMyListingsOpen(false)}
         properties={properties}
         authUser={authUser}
-        onViewProperty={(p) => {
+        onSelectProperty={(p) => {
           setIsMyListingsOpen(false);
           setSelectedProperty(p);
         }}
-        onDeleteProperty={handleRequestDeleteProperty}
+        onEditProperty={handleEditProperty}
+        onRequestDelete={handleRequestDeleteProperty}
         onOpenPostProperty={() => {
           setIsMyListingsOpen(false);
+          setEditingProperty(null);
           setIsPostPropertyOpen(true);
         }}
         lang={lang}
@@ -801,8 +833,10 @@ export default function App() {
 
       <PostPropertyModal
         isOpen={isPostPropertyOpen}
-        onClose={() => setIsPostPropertyOpen(false)}
+        onClose={handleClosePostProperty}
         onAddProperty={handleAddProperty}
+        onUpdateProperty={handleUpdateProperty}
+        propertyToEdit={editingProperty}
         lang={lang}
         authUser={authUser}
       />

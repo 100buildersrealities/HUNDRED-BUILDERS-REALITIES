@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Upload, 
@@ -16,7 +16,9 @@ import {
   Plus,
   Landmark,
   Tractor,
-  Ruler
+  Ruler,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { Property, PurposeType, PropertyCategory, FurnishingStatus, PossessionStatus, FacingDirection, AgriculturalLandDetails, ResidentialPlotDetails, ListedByType, AuthUser } from '../types';
 import { AgriculturalLandAreaForm } from './AgriculturalLandAreaForm';
@@ -37,6 +39,8 @@ interface PostPropertyModalProps {
   onAddProperty: (newProp: Property) => void;
   lang: Language;
   authUser?: AuthUser | null;
+  propertyToEdit?: Property | null;
+  onUpdateProperty?: (updatedProp: Property) => void;
 }
 
 export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
@@ -45,10 +49,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   onAddProperty,
   lang,
   authUser,
+  propertyToEdit,
+  onUpdateProperty,
 }) => {
   if (!isOpen) return null;
 
   const t = translations[lang];
+  const isHi = lang === 'hi';
+  const isEditing = Boolean(propertyToEdit);
 
   // Wizard Step State
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -160,6 +168,101 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   const [honeypot, setHoneypot] = useState('');
 
   const [formError, setFormError] = useState('');
+
+  // Synchronize form fields whenever propertyToEdit changes or modal opens
+  useEffect(() => {
+    if (propertyToEdit) {
+      setPurpose(propertyToEdit.purpose);
+      setCategory(propertyToEdit.category);
+      setTitle(propertyToEdit.title || propertyToEdit.titleHi || '');
+      setCity(propertyToEdit.city || authUser?.city || 'Raipur');
+      setLocality(propertyToEdit.locality || '');
+      setAddress(propertyToEdit.address || '');
+      setPincode(propertyToEdit.pincode || '');
+      setSocietyName(propertyToEdit.societyName || '');
+
+      setDistrict(propertyToEdit.revenueCircleDetails?.district || propertyToEdit.city || 'Raipur');
+      setTehsil(propertyToEdit.revenueCircleDetails?.tehsil || '');
+      setRevenueCircle(propertyToEdit.revenueCircleDetails?.revenueInspectorCircle || '');
+      setVillage(propertyToEdit.revenueCircleDetails?.village || '');
+      setKhasraNumber(propertyToEdit.revenueCircleDetails?.khasraNumber || '');
+
+      setBhk(propertyToEdit.bhk || 2);
+      setBathrooms(propertyToEdit.bathrooms || 2);
+      setBalconies(propertyToEdit.balconies || 1);
+      setCarpetAreaSqFt(propertyToEdit.carpetAreaSqFt || 1150);
+      setFloor(propertyToEdit.floor || 0);
+      setTotalFloors(propertyToEdit.totalFloors || 0);
+      setFacing(propertyToEdit.facing || 'East');
+      setFurnishing(propertyToEdit.furnishing || 'semi_furnished');
+      setPossession(propertyToEdit.possession || 'ready_to_move');
+
+      if (propertyToEdit.agriculturalLandDetails) {
+        setAgriDetails(propertyToEdit.agriculturalLandDetails);
+      }
+      if (propertyToEdit.plotDetails) {
+        setPlotDetails(propertyToEdit.plotDetails);
+      }
+
+      setPrice(propertyToEdit.price);
+      setMaintenance(propertyToEdit.maintenance || 0);
+      setIsNegotiable(propertyToEdit.isNegotiable ?? true);
+      setDescription(propertyToEdit.description || propertyToEdit.descriptionHi || '');
+      setSelectedAmenities(propertyToEdit.amenities || ['lift', 'parking', 'security']);
+      setSelectedImages(
+        propertyToEdit.images && propertyToEdit.images.length > 0 
+          ? [...propertyToEdit.images] 
+          : [SAMPLE_PROPERTY_IMAGES[0]]
+      );
+
+      setContactName(propertyToEdit.contactName || authUser?.name || '');
+      setContactPhone(propertyToEdit.contactPhone || authUser?.phone || '');
+      setContactEmail(propertyToEdit.contactEmail || authUser?.email || '');
+      setListedBy(propertyToEdit.listedBy || (authUser?.role ? (authUser.role as ListedByType) : 'owner'));
+      setStep(1);
+      setFormError('');
+    } else {
+      // Default initial states for a brand new property
+      setPurpose('buy');
+      setCategory('apartment');
+      setTitle('');
+      setCity(authUser?.city || 'Raipur');
+      setLocality('');
+      setAddress('');
+      setPincode('');
+      setSocietyName(authUser?.companyName || '');
+
+      setDistrict(authUser?.city || 'Raipur');
+      setTehsil('');
+      setRevenueCircle('');
+      setVillage('');
+      setKhasraNumber('');
+
+      setBhk(2);
+      setBathrooms(2);
+      setBalconies(1);
+      setCarpetAreaSqFt(1150);
+      setFloor(4);
+      setTotalFloors(12);
+      setFacing('East');
+      setFurnishing('semi_furnished');
+      setPossession('ready_to_move');
+
+      setPrice(6500000);
+      setMaintenance(2500);
+      setIsNegotiable(true);
+      setDescription('');
+      setSelectedAmenities(['lift', 'parking', 'security', 'power_backup', 'water_supply']);
+      setSelectedImages([SAMPLE_PROPERTY_IMAGES[0], SAMPLE_PROPERTY_IMAGES[1]]);
+
+      setContactName(authUser?.name || '');
+      setContactPhone(authUser?.phone || '');
+      setContactEmail(authUser?.email || '');
+      setListedBy(authUser?.role ? (authUser.role as ListedByType) : 'owner');
+      setStep(1);
+      setFormError('');
+    }
+  }, [propertyToEdit, isOpen, authUser]);
 
   const handleToggleAmenity = (id: string) => {
     setSelectedAmenities((prev) =>
@@ -368,6 +471,70 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
       creatorUserRole: authUser?.role,
     };
 
+    if (propertyToEdit && onUpdateProperty) {
+      const updatedProp: Property = {
+        ...propertyToEdit,
+        purpose,
+        category,
+        title: defaultGeneratedTitle,
+        titleHi: defaultGeneratedTitleHi,
+        price: Number(price),
+        priceDisplayEn: formatPriceDisplay(Number(price), isRent),
+        priceDisplayHi: formatPriceDisplayHi(Number(price), isRent),
+        pricePerSqFt,
+        maintenance: Number(maintenance),
+        isNegotiable,
+        city: sanitizeText(city, 60),
+        state: CHHATTISGARH_CITIES.includes(city)
+          ? 'Chhattisgarh'
+          : MADHYA_PRADESH_CITIES.includes(city)
+          ? 'Madhya Pradesh'
+          : propertyToEdit.state,
+        district: safeDistrict || propertyToEdit.district,
+        tehsil: safeTehsil || propertyToEdit.tehsil,
+        revenueCircle: sanitizeText(revenueCircle.trim(), 80) || propertyToEdit.revenueCircle,
+        village: safeVillage || propertyToEdit.village,
+        khasraNumber: safeKhasra || propertyToEdit.khasraNumber,
+        revenueCircleDetails: {
+          district: safeDistrict || city,
+          tehsil: safeTehsil || '',
+          revenueInspectorCircle: sanitizeText(revenueCircle.trim(), 80),
+          village: safeVillage || '',
+          khasraNumber: safeKhasra || '',
+        },
+        locality: safeLocality || propertyToEdit.locality || city,
+        address: sanitizeText(address.trim(), 250) || propertyToEdit.address,
+        pincode: sanitizeText(pincode.trim(), 10) || propertyToEdit.pincode,
+        societyName: safeSociety || propertyToEdit.societyName,
+        bhk: (isAgri || isPlot) ? 0 : Number(bhk),
+        bathrooms: (isAgri || isPlot) ? 0 : Number(bathrooms),
+        balconies: (isAgri || isPlot) ? 0 : Number(balconies),
+        carpetAreaSqFt: effectiveSqFt,
+        landAreaAcres: isAgri ? agriDetails.totalAreaAcres : undefined,
+        plotAreaSqYds: isPlot ? (plotDetails.totalAreaSqYds || Math.round(plotDetails.totalAreaSqFt / 9)) : undefined,
+        floor: (isAgri || isPlot) ? 0 : Number(floor),
+        totalFloors: (isAgri || isPlot) ? 0 : Number(totalFloors),
+        facing: isPlot ? (plotDetails.facingDirection || facing) : facing,
+        furnishing: (isAgri || isPlot) ? 'unfurnished' : furnishing,
+        possession,
+        agriculturalLandDetails: isAgri ? agriDetails : undefined,
+        plotDetails: isPlot ? plotDetails : undefined,
+        images: selectedImages.length > 0 ? selectedImages : propertyToEdit.images,
+        contactName: sanitizeText(contactName.trim(), 80),
+        contactPhone: sanitizeText(contactPhone.trim(), 15),
+        contactEmail: sanitizeText(contactEmail.trim(), 80) || propertyToEdit.contactEmail,
+        contactWhatsApp: sanitizeText(contactPhone.trim(), 15),
+        description: sanitizeText(description.trim(), 1000) || propertyToEdit.description,
+        descriptionHi: sanitizeText(description.trim(), 1000) || propertyToEdit.descriptionHi,
+        amenities: selectedAmenities,
+        listedBy,
+      };
+
+      onUpdateProperty(updatedProp);
+      onClose();
+      return;
+    }
+
     onAddProperty(newProp);
   };
 
@@ -380,17 +547,36 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-900 text-white">
           <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-full overflow-hidden border border-amber-400/80 shadow-xs shrink-0 bg-slate-950">
-              <img 
-                src="/logo.png" 
-                alt="100 Builders Realities Seal" 
-                className="w-full h-full object-cover" 
-                referrerPolicy="no-referrer" 
-              />
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-amber-400/80 shadow-xs shrink-0 bg-slate-950 flex items-center justify-center">
+              {isEditing ? (
+                <Pencil className="w-5 h-5 text-amber-400" />
+              ) : (
+                <img 
+                  src="/logo.png" 
+                  alt="100 Builders Realities Seal" 
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer" 
+                />
+              )}
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-extrabold">{t.postPropertyTitle}</h2>
-              <p className="text-xs text-slate-300 hidden sm:block">{t.postPropertySubtitle}</p>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-base sm:text-lg font-extrabold">
+                  {isEditing
+                    ? (isHi ? 'प्रॉपर्टी लिस्टिंग में बदलाव करें (एडिट)' : 'Edit Property Listing')
+                    : t.postPropertyTitle}
+                </h2>
+                {isEditing && (
+                  <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                    {isHi ? 'एडिट मोड' : 'Edit Mode'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 hidden sm:block">
+                {isEditing
+                  ? (isHi ? 'फोटो हटाएं/जोड़ें, कीमत, साइज और अन्य सभी विवरण अपडेट करें' : 'Update photos, price, size, description and other details')
+                  : t.postPropertySubtitle}
+              </p>
             </div>
           </div>
           <button
@@ -916,25 +1102,54 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  {t.photosUpload}
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    {t.photosUpload} ({selectedImages.length} {isHi ? 'तस्वीरें' : 'photos'})
+                  </label>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {isHi ? 'लाल बटन से फोटो हटाएं, नई फोटो नीचे से जोड़ें' : 'Remove photos with red button, add new ones below'}
+                  </span>
+                </div>
                 
                 {/* Image Gallery Selected */}
-                <div className="flex flex-wrap gap-2.5 mb-3">
-                  {selectedImages.map((img, i) => (
-                    <div key={i} className="relative w-24 h-20 rounded-xl overflow-hidden border border-slate-200 group">
-                      <img src={img} alt="preview" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(i)}
-                        className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                {selectedImages.length === 0 ? (
+                  <div className="p-4 rounded-xl border border-dashed border-amber-300 bg-amber-50/60 text-center text-xs text-amber-900 font-bold mb-3">
+                    {isHi ? 'कोई फोटो नहीं है। कृपया नीचे से फोटो जोड़ें।' : 'No photos selected. Please upload or add photos below.'}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2.5 mb-3">
+                    {selectedImages.map((img, i) => (
+                      <div key={i} className="relative w-28 h-24 rounded-xl overflow-hidden border-2 border-slate-200 group shadow-xs">
+                        <img src={img} alt="preview" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                        {i === 0 ? (
+                          <span className="absolute bottom-1 left-1 bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
+                            {isHi ? 'मुख्य फोटो' : 'Cover'}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newArr = [img, ...selectedImages.filter((_, idx) => idx !== i)];
+                              setSelectedImages(newArr);
+                            }}
+                            className="absolute bottom-1 left-1 bg-slate-900/85 hover:bg-slate-900 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs cursor-pointer"
+                            title={isHi ? 'इसे मुख्य फोटो बनाएं' : 'Make Cover Photo'}
+                          >
+                            {isHi ? 'मुख्य बनाएं' : 'Set Cover'}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(i)}
+                          className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg p-1 shadow-md transition cursor-pointer active:scale-95 flex items-center justify-center"
+                          title={isHi ? 'फोटो हटाएं (Remove Photo)' : 'Remove Photo'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Quick Add Preset Sample Images */}
                 <div className="space-y-2">
@@ -1134,8 +1349,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   type="submit"
                   className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-extrabold text-sm px-8 py-3.5 rounded-xl shadow-lg shadow-amber-500/25 flex items-center space-x-2 cursor-pointer active:scale-98"
                 >
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>{t.submitListing}</span>
+                  {isEditing ? <Check className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                  <span>
+                    {isEditing
+                      ? (isHi ? 'बदलाव सहेजें (Save Changes)' : 'Save Changes')
+                      : t.submitListing}
+                  </span>
                 </button>
               </div>
             </div>
