@@ -45,8 +45,11 @@ import { SecurityTrustModal } from './components/SecurityTrustModal';
 import { AdvertisementPackagesModal } from './components/AdvertisementPackagesModal';
 import { AuthModal } from './components/AuthModal';
 import { RolePortalsBanner } from './components/RolePortalsBanner';
+import { DeletePropertyConfirmModal } from './components/DeletePropertyConfirmModal';
+import { MyListingsModal } from './components/MyListingsModal';
 import { Footer } from './components/Footer';
 import { secureStore, secureRetrieve } from './utils/security';
+import { isPropertyOwnedByUser } from './utils/propertyUtils';
 
 export default function App() {
   // Language state (defaults to Hindi as requested by the user, easily switchable to English)
@@ -147,11 +150,46 @@ export default function App() {
   const [isCareerCareOpen, setIsCareerCareOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isAdPackagesOpen, setIsAdPackagesOpen] = useState(false);
+  const [isMyListingsOpen, setIsMyListingsOpen] = useState(false);
+  const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const t = translations[lang];
+
+  // Number of listings owned by the logged-in user
+  const myListingsCount = useMemo(() => {
+    if (!authUser) return 0;
+    return properties.filter(p => isPropertyOwnedByUser(p, authUser)).length;
+  }, [properties, authUser]);
+
+  // Handle request to delete property (opens confirmation modal)
+  const handleRequestDeleteProperty = (property: Property) => {
+    setDeletingProperty(property);
+  };
+
+  // Handle actual confirmed deletion of property
+  const handleConfirmDeleteProperty = (propertyId: string) => {
+    const targetProp = properties.find(p => p.id === propertyId);
+    setProperties(prev => prev.filter(p => p.id !== propertyId));
+    setShortlistIds(prev => prev.filter(id => id !== propertyId));
+    setCompareIds(prev => prev.filter(id => id !== propertyId));
+    if (selectedProperty?.id === propertyId) {
+      setSelectedProperty(null);
+    }
+    setDeletingProperty(null);
+
+    const propName = targetProp 
+      ? (lang === 'hi' ? targetProp.titleHi : targetProp.title) 
+      : 'प्रॉपर्टी';
+
+    showToast(
+      lang === 'hi'
+        ? `लिस्टिंग "${propName}" पोर्टल से स्थायी रूप से हटा दी गई है।`
+        : `Listing "${propName}" has been successfully deleted from the portal.`
+    );
+  };
 
   // Save to secureStorage when properties change
   useEffect(() => {
@@ -405,6 +443,8 @@ export default function App() {
         authUser={authUser}
         onOpenAuth={handleOpenAuth}
         onLogout={handleLogout}
+        onOpenMyListings={() => setIsMyListingsOpen(true)}
+        myListingsCount={myListingsCount}
         shortlistCount={shortlistIds.length}
         compareCount={compareIds.length}
         inquiryCount={siteVisits.length}
@@ -442,6 +482,8 @@ export default function App() {
         authUser={authUser}
         onOpenAuth={handleOpenAuth}
         onOpenPostProperty={() => setIsPostPropertyOpen(true)}
+        onOpenMyListings={() => setIsMyListingsOpen(true)}
+        myListingsCount={myListingsCount}
         onLogout={handleLogout}
         lang={lang}
       />
@@ -641,6 +683,8 @@ export default function App() {
                     onViewDetails={(p) => setSelectedProperty(p)}
                     onBookVisit={(p) => setInquiryProperty(p)}
                     viewMode={viewMode}
+                    authUser={authUser}
+                    onDeleteProperty={handleRequestDeleteProperty}
                   />
                 ))}
               </div>
@@ -721,10 +765,38 @@ export default function App() {
         onToggleShortlist={handleToggleShortlist}
         isCompared={selectedProperty ? compareIds.includes(selectedProperty.id) : false}
         onToggleCompare={handleToggleCompare}
+        authUser={authUser}
+        onDeleteProperty={handleRequestDeleteProperty}
         onBookVisit={(p) => {
           setSelectedProperty(null);
           setInquiryProperty(p);
         }}
+      />
+
+      {/* User My Listings Dashboard Modal */}
+      <MyListingsModal
+        isOpen={isMyListingsOpen}
+        onClose={() => setIsMyListingsOpen(false)}
+        properties={properties}
+        authUser={authUser}
+        onViewProperty={(p) => {
+          setIsMyListingsOpen(false);
+          setSelectedProperty(p);
+        }}
+        onDeleteProperty={handleRequestDeleteProperty}
+        onOpenPostProperty={() => {
+          setIsMyListingsOpen(false);
+          setIsPostPropertyOpen(true);
+        }}
+        lang={lang}
+      />
+
+      {/* Delete Property Confirmation Modal */}
+      <DeletePropertyConfirmModal
+        property={deletingProperty}
+        onClose={() => setDeletingProperty(null)}
+        onConfirmDelete={handleConfirmDeleteProperty}
+        lang={lang}
       />
 
       <PostPropertyModal

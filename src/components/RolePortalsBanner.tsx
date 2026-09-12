@@ -21,6 +21,8 @@ interface RolePortalsBannerProps {
   authUser: AuthUser | null;
   onOpenAuth: (role: UserRole, mode: 'login' | 'signup') => void;
   onOpenPostProperty: () => void;
+  onOpenMyListings?: () => void;
+  myListingsCount?: number;
   onLogout: () => void;
   lang: Language;
 }
@@ -29,6 +31,8 @@ export const RolePortalsBanner: React.FC<RolePortalsBannerProps> = ({
   authUser,
   onOpenAuth,
   onOpenPostProperty,
+  onOpenMyListings,
+  myListingsCount = 0,
   onLogout,
   lang,
 }) => {
@@ -144,11 +148,22 @@ export const RolePortalsBanner: React.FC<RolePortalsBannerProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 w-full md:w-auto">
+          <div className="flex items-center space-x-2.5 w-full md:w-auto flex-wrap gap-y-2">
+            {onOpenMyListings && (
+              <button
+                id="portal-my-listings-btn"
+                onClick={onOpenMyListings}
+                className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-amber-500/40 px-3.5 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs active:scale-95"
+              >
+                <FileCheck className="w-4 h-4 text-amber-400" />
+                <span>{isHi ? `मेरी लिस्टिंग्स (${myListingsCount})` : `My Listings (${myListingsCount})`}</span>
+              </button>
+            )}
+
             <button
               id="portal-post-property-btn"
               onClick={onOpenPostProperty}
-              className="flex-1 md:flex-none bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs shadow-sm transition flex items-center justify-center space-x-1.5 cursor-pointer"
+              className="flex-1 md:flex-none bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs shadow-sm transition flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
               <span>{isHi ? 'नई प्रॉपर्टी लिस्ट करें' : 'Post New Property'}</span>

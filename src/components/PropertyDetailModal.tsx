@@ -35,10 +35,12 @@ import {
   Landmark,
   Tractor,
   Ruler,
-  Shield
+  Shield,
+  Trash2
 } from 'lucide-react';
-import { Property } from '../types';
+import { Property, AuthUser } from '../types';
 import { Language, translations, amenitiesList } from '../data/translations';
+import { isPropertyOwnedByUser } from '../utils/propertyUtils';
 
 interface PropertyDetailModalProps {
   property: Property | null;
@@ -49,6 +51,8 @@ interface PropertyDetailModalProps {
   isCompared: boolean;
   onToggleCompare: (property: Property) => void;
   onBookVisit: (property: Property) => void;
+  authUser?: AuthUser | null;
+  onDeleteProperty?: (property: Property) => void;
 }
 
 export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
@@ -60,6 +64,8 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   isCompared,
   onToggleCompare,
   onBookVisit,
+  authUser,
+  onDeleteProperty,
 }) => {
   if (!property) return null;
 
@@ -67,6 +73,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   const isIndic = lang !== 'en';
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
   const [copied, setCopied] = useState(false);
+  const isOwned = isPropertyOwnedByUser(property, authUser || null);
 
   // EMI Calculator internal state for this property
   const [downPaymentPercent, setDownPaymentPercent] = useState(20);
@@ -189,6 +196,19 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
             >
               <Heart className={`w-4 h-4 ${isShortlisted ? 'fill-current' : ''}`} />
             </button>
+
+            {isOwned && onDeleteProperty && (
+              <button
+                id="detail-modal-delete-top-btn"
+                onClick={() => onDeleteProperty(property)}
+                className="p-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center space-x-1.5 active:scale-95"
+                title={isIndic ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span className="text-xs font-black">{isIndic ? 'डिलीट' : 'Delete'}</span>
+              </button>
+            )}
+
             <button
               id="detail-modal-close-btn"
               onClick={onClose}
@@ -201,6 +221,40 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <div className="overflow-y-auto p-6 sm:p-8 space-y-8">
+
+          {/* Logged-In User Ownership Banner */}
+          {isOwned && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-orange-50 rounded-2xl p-4 border border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                  ✓
+                </div>
+                <div>
+                  <div className="text-xs font-black text-slate-900 flex items-center space-x-2">
+                    <span>{isIndic ? 'यह आपकी अधिकृत लिस्टिंग है' : 'Your Authorized Listing'}</span>
+                    <span className="bg-amber-200 text-amber-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {isIndic ? 'लिस्टिंग कर्ता' : 'Creator'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    {isIndic 
+                      ? 'आप इस प्रॉपर्टी के पंजीकृत लिस्टिंग कर्ता हैं। यदि यह प्रॉपर्टी बिक चुकी है या आप इसे हटाना चाहते हैं, तो आप इसे यहाँ से हटा सकते हैं।' 
+                      : 'You are the registered creator of this listing. You can permanently delete this property whenever you wish.'}
+                  </p>
+                </div>
+              </div>
+              {onDeleteProperty && (
+                <button
+                  id="detail-modal-banner-delete-btn"
+                  onClick={() => onDeleteProperty(property)}
+                  className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white rounded-xl text-xs font-black flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-md shadow-rose-600/20 active:scale-95 shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isIndic ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}</span>
+                </button>
+              )}
+            </div>
+          )}
           
           {/* Main Title & Price Header */}
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -922,6 +976,18 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               >
                 <Phone className="w-4 h-4" />
               </button>
+
+              {isOwned && onDeleteProperty && (
+                <button
+                  id="modal-bottom-delete-cta"
+                  onClick={() => onDeleteProperty(property)}
+                  className="px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-xs transition cursor-pointer shadow-xs flex items-center space-x-1.5 active:scale-95"
+                  title={isIndic ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  <span>{isIndic ? 'प्रॉपर्टी हटाएं' : 'Delete'}</span>
+                </button>
+              )}
             </div>
           </div>
 

@@ -364,6 +364,8 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
       },
       createdAt: new Date().toISOString().split('T')[0],
       viewsCount: 1,
+      creatorUserId: authUser?.id,
+      creatorUserRole: authUser?.role,
     };
 
     onAddProperty(newProp);

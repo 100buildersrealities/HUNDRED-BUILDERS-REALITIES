@@ -200,6 +200,8 @@ export interface Property {
   
   createdAt: string;
   viewsCount: number;
+  creatorUserId?: string;
+  creatorUserRole?: UserRole;
 }
 
 export interface FilterState {

@@ -49,6 +49,8 @@ interface HeaderProps {
   authUser: AuthUser | null;
   onOpenAuth: (role?: UserRole, mode?: 'login' | 'signup') => void;
   onLogout: () => void;
+  onOpenMyListings?: () => void;
+  myListingsCount?: number;
   shortlistCount: number;
   compareCount: number;
   inquiryCount: number;
@@ -74,6 +76,8 @@ export const Header: React.FC<HeaderProps> = ({
   authUser,
   onOpenAuth,
   onLogout,
+  onOpenMyListings,
+  myListingsCount = 0,
   shortlistCount,
   compareCount,
   inquiryCount,
@@ -509,6 +513,22 @@ export const Header: React.FC<HeaderProps> = ({
                       <PlusCircle className="w-4 h-4 text-amber-600" />
                       <span>{lang === 'hi' ? 'नई प्रॉपर्टी लिस्ट करें' : 'Post New Property'}</span>
                     </button>
+
+                    {onOpenMyListings && (
+                      <button
+                        id="header-user-menu-my-listings"
+                        onClick={() => { onOpenMyListings(); setUserMenuOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-amber-50 hover:text-amber-900 flex items-center justify-between font-bold cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="w-4 h-4 text-amber-600" />
+                          <span>{lang === 'hi' ? 'मेरी लिस्टेड प्रॉपर्टीज (हटाएं)' : 'My Listed Properties'}</span>
+                        </div>
+                        <span className="bg-amber-100 text-amber-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                          {myListingsCount}
+                        </span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => { onOpenInquiries(); setUserMenuOpen(false); }}
@@ -1026,6 +1046,23 @@ export const Header: React.FC<HeaderProps> = ({
                 FREE
               </span>
             </button>
+
+            {/* My Listings in Mobile Menu if logged in */}
+            {authUser && onOpenMyListings && (
+              <button
+                id="mobile-my-listings-btn"
+                onClick={() => { onOpenMyListings(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 text-amber-400 border border-amber-500/40 font-black text-sm shadow-xs cursor-pointer"
+              >
+                <div className="flex items-center space-x-2">
+                  <Building2 className="w-4 h-4 text-amber-400" />
+                  <span>{lang === 'hi' ? 'मेरी लिस्टेड प्रॉपर्टीज (हटाएं)' : 'My Listed Properties'}</span>
+                </div>
+                <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full">
+                  {myListingsCount}
+                </span>
+              </button>
+            )}
 
             <button
               onClick={() => { onOpenEmiCalc(); setMobileMenuOpen(false); }}

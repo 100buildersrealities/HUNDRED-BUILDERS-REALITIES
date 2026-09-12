@@ -13,10 +13,12 @@ import {
   Check, 
   MessageSquare,
   CalendarCheck,
-  Award
+  Award,
+  Trash2
 } from 'lucide-react';
-import { Property } from '../types';
+import { Property, AuthUser } from '../types';
 import { Language, translations } from '../data/translations';
+import { isPropertyOwnedByUser } from '../utils/propertyUtils';
 
 interface PropertyCardProps {
   property: Property;
@@ -28,6 +30,8 @@ interface PropertyCardProps {
   onViewDetails: (property: Property) => void;
   onBookVisit: (property: Property) => void;
   viewMode?: 'grid' | 'list';
+  authUser?: AuthUser | null;
+  onDeleteProperty?: (property: Property) => void;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -40,10 +44,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onViewDetails,
   onBookVisit,
   viewMode = 'grid',
+  authUser,
+  onDeleteProperty,
 }) => {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const t = translations[lang];
   const isIndic = lang !== 'en';
+  const isOwned = isPropertyOwnedByUser(property, authUser || null);
 
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -93,6 +100,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         {/* Badges on Image */}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+          {isOwned && (
+            <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-[11px] font-black bg-amber-400 text-slate-950 shadow-md border border-amber-300">
+              <Check className="w-3 h-3 text-slate-950 stroke-[3]" />
+              <span>{isIndic ? 'आपकी लिस्टिंग' : 'Your Listing'}</span>
+            </span>
+          )}
           {property.isExclusiveHundredBuilders && (
             <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-[11px] font-extrabold bg-amber-500 text-slate-950 shadow-md">
               <Sparkles className="w-3 h-3 text-slate-950" />
@@ -360,6 +373,20 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           >
             <Phone className="w-4 h-4" />
           </button>
+
+          {isOwned && onDeleteProperty && (
+            <button
+              id={`delete-btn-${property.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteProperty(property);
+              }}
+              className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer flex items-center justify-center shrink-0"
+              title={isIndic ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" />
+            </button>
+          )}
         </div>
       </div>
     </div>
