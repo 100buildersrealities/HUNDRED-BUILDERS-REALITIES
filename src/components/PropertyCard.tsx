@@ -169,8 +169,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           {property.listedBy === 'hundred_builders' 
             ? 'Hundred Builders' 
             : property.listedBy === 'owner' 
-            ? (isIndic ? 'मालिक द्वारा' : 'By Owner (0 Brokerage)') 
-            : 'Verified Agent'}
+            ? (isIndic ? 'मालिक द्वारा (0 ब्रोकरेज)' : 'By Owner (0 Brokerage)') 
+            : property.listedBy === 'registered_broker'
+            ? (isIndic ? 'रजिस्टर्ड ब्रोकर (RERA)' : 'Registered Broker')
+            : (isIndic ? 'वेरिफाइड एजेंट' : 'Verified Agent')}
         </div>
       </div>
 

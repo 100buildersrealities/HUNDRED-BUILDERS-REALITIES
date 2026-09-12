@@ -884,7 +884,13 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">
-                  {property.listedBy === 'hundred_builders' ? 'Hundred Builders Official Desk' : 'Verified Property Contact'}
+                  {property.listedBy === 'hundred_builders' 
+                    ? 'Hundred Builders Official Desk' 
+                    : property.listedBy === 'owner'
+                    ? (isIndic ? 'प्रॉपर्टी मालिक (0% ब्रोकरेज)' : 'Direct Property Owner (0% Brokerage)')
+                    : property.listedBy === 'registered_broker'
+                    ? (isIndic ? 'रजिस्टर्ड रियल एस्टेट ब्रोकर' : 'Registered Real Estate Broker (RERA)')
+                    : (isIndic ? 'वेरिफाइड एजेंट डेस्क' : 'Verified Agent Desk')}
                 </span>
                 <span className="text-base font-extrabold text-slate-900 block">{property.contactName}</span>
                 <span className="text-xs text-slate-600">{property.contactPhone}</span>

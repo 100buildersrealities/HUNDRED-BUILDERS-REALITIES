@@ -22,7 +22,9 @@ import {
   Property, 
   FilterState, 
   PurposeType, 
-  SiteVisitBooking 
+  SiteVisitBooking,
+  UserRole,
+  AuthUser 
 } from './types';
 import { Language, translations, INDIAN_LANGUAGES } from './data/translations';
 import { initialProperties, CITIES_LIST, CHHATTISGARH_CITIES, MADHYA_PRADESH_CITIES, ALL_CHHATTISGARH_OPTION, ALL_MADHYA_PRADESH_OPTION } from './data/mockProperties';
@@ -41,12 +43,48 @@ import { InquiriesListModal } from './components/InquiriesListModal';
 import { CareerCareModal } from './components/CareerCareModal';
 import { SecurityTrustModal } from './components/SecurityTrustModal';
 import { AdvertisementPackagesModal } from './components/AdvertisementPackagesModal';
+import { AuthModal } from './components/AuthModal';
+import { RolePortalsBanner } from './components/RolePortalsBanner';
 import { Footer } from './components/Footer';
 import { secureStore, secureRetrieve } from './utils/security';
 
 export default function App() {
   // Language state (defaults to Hindi as requested by the user, easily switchable to English)
   const [lang, setLang] = useState<Language>('hi');
+
+  // User Authentication State (tamper-evident storage)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
+    return secureRetrieve<AuthUser | null>('hb_auth_user', null);
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalRole, setAuthModalRole] = useState<UserRole>('owner');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+
+  const handleOpenAuth = (role: UserRole = 'owner', mode: 'login' | 'signup' = 'login') => {
+    setAuthModalRole(role);
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const handleAuthSuccess = (user: AuthUser) => {
+    setAuthUser(user);
+    secureStore('hb_auth_user', user);
+    const roleNameHi = 
+      user.role === 'owner' ? 'प्रॉपर्टी मालिक' :
+      user.role === 'verified_agent' ? 'वेरिफाइड एजेंट' :
+      user.role === 'hundred_builders' ? 'हंड्रेड बिल्डर्स पार्टनर' : 'रजिस्टर्ड ब्रोकर (RERA)';
+    setToastMessage(
+      lang === 'hi'
+        ? `स्वागत है, ${user.name}! आप ${roleNameHi} के रूप में सफलतापूर्वक लॉगिन हो चुके हैं।`
+        : `Welcome, ${user.name}! Successfully logged in as ${user.role}.`
+    );
+  };
+
+  const handleLogout = () => {
+    setAuthUser(null);
+    secureStore('hb_auth_user', null);
+    setToastMessage(lang === 'hi' ? 'आप सफलतापूर्वक लॉगआउट हो चुके हैं।' : 'You have been logged out.');
+  };
 
   // Properties State (loads user-added listings from localStorage)
   // Properties State (loads user-added listings with tamper-evident secure storage)
@@ -364,6 +402,9 @@ export default function App() {
         onOpenInquiries={() => setIsInquiriesOpen(true)}
         onOpenSecurityTrust={() => setIsSecurityModalOpen(true)}
         onOpenAdPackages={() => setIsAdPackagesOpen(true)}
+        authUser={authUser}
+        onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
         shortlistCount={shortlistIds.length}
         compareCount={compareIds.length}
         inquiryCount={siteVisits.length}
@@ -394,6 +435,15 @@ export default function App() {
           document.getElementById('property-catalog-section')?.scrollIntoView({ behavior: 'smooth' });
         }}
         totalListingsCount={properties.length}
+      />
+
+      {/* 4 Dedicated Portals Banner: Property Owner, Verified Agent, Hundred Builders, Registered Broker */}
+      <RolePortalsBanner
+        authUser={authUser}
+        onOpenAuth={handleOpenAuth}
+        onOpenPostProperty={() => setIsPostPropertyOpen(true)}
+        onLogout={handleLogout}
+        lang={lang}
       />
 
       {/* Main Content Area: Catalog + Filter Sidebar */}
@@ -681,6 +731,17 @@ export default function App() {
         isOpen={isPostPropertyOpen}
         onClose={() => setIsPostPropertyOpen(false)}
         onAddProperty={handleAddProperty}
+        lang={lang}
+        authUser={authUser}
+      />
+
+      {/* Role-Based Login & Signup Modal (Owner, Agent, Hundred Builders, Registered Broker) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialRole={authModalRole}
+        initialMode={authModalMode}
+        onAuthSuccess={handleAuthSuccess}
         lang={lang}
       />
 

@@ -16,11 +16,18 @@ import {
   CalendarCheck,
   Briefcase,
   ShieldCheck,
-  Megaphone
+  Megaphone,
+  User,
+  LogIn,
+  UserPlus,
+  LogOut,
+  ChevronDown,
+  Home,
+  Award
 } from 'lucide-react';
 import { Language, translations, INDIAN_LANGUAGES } from '../data/translations';
 import { CITIES_LIST, CHHATTISGARH_CITIES, MADHYA_PRADESH_CITIES, OTHER_METRO_CITIES, ALL_CHHATTISGARH_OPTION, ALL_MADHYA_PRADESH_OPTION } from '../data/mockProperties';
-import { PurposeType } from '../types';
+import { PurposeType, UserRole, AuthUser } from '../types';
 import { TopIndianLanguageBar } from './TopIndianLanguageBar';
 import { IndianLanguageModal } from './IndianLanguageModal';
 
@@ -39,6 +46,9 @@ interface HeaderProps {
   onOpenInquiries: () => void;
   onOpenSecurityTrust?: () => void;
   onOpenAdPackages?: () => void;
+  authUser: AuthUser | null;
+  onOpenAuth: (role?: UserRole, mode?: 'login' | 'signup') => void;
+  onLogout: () => void;
   shortlistCount: number;
   compareCount: number;
   inquiryCount: number;
@@ -61,6 +71,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenInquiries,
   onOpenSecurityTrust,
   onOpenAdPackages,
+  authUser,
+  onOpenAuth,
+  onLogout,
   shortlistCount,
   compareCount,
   inquiryCount,
@@ -69,6 +82,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langModalOpen, setLangModalOpen] = useState(false);
+  const [authDropdownOpen, setAuthDropdownOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const t = translations[lang];
   const currentLangObj = INDIAN_LANGUAGES.find((l) => l.code === lang) || INDIAN_LANGUAGES[0];
 
@@ -108,7 +123,65 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-1 text-slate-300">
             <span>{t.officialEmail}</span>
           </div>
-          <div className="ml-auto flex items-center space-x-4">
+          <div className="ml-auto flex items-center space-x-3">
+            {/* 4 Role Direct Quick Auth Triggers in Top Bar */}
+            {authUser ? (
+              <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-2.5 py-0.5 rounded-full text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="font-bold text-white truncate max-w-[120px]">{authUser.name}</span>
+                <span className="text-amber-400 font-extrabold text-[10px]">
+                  ({authUser.role === 'owner' ? (lang === 'hi' ? 'मालिक' : 'Owner') :
+                    authUser.role === 'verified_agent' ? (lang === 'hi' ? 'एजेंट' : 'Agent') :
+                    authUser.role === 'hundred_builders' ? (lang === 'hi' ? 'बिल्डर' : 'Builder') :
+                    (lang === 'hi' ? 'ब्रोकर' : 'Broker')})
+                </span>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="text-slate-400 hover:text-white cursor-pointer ml-1 underline text-[10px]"
+                >
+                  {lang === 'hi' ? 'लॉगआउट' : 'Logout'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1.5 text-[11px]">
+                <span className="text-slate-500 font-bold hidden xl:inline">लॉगिन/साइनअप:</span>
+                <button
+                  type="button"
+                  onClick={() => onOpenAuth('owner', 'login')}
+                  className="bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 hover:text-amber-100 border border-amber-400/40 px-2 py-0.5 rounded-full transition cursor-pointer font-bold text-[10.5px]"
+                  title="प्रॉपर्टी मालिक लॉगिन"
+                >
+                  🏡 {lang === 'hi' ? 'मालिक लॉगिन' : 'Owner Login'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAuth('verified_agent', 'login')}
+                  className="bg-blue-400/15 hover:bg-blue-400/25 text-blue-300 hover:text-blue-100 border border-blue-400/40 px-2 py-0.5 rounded-full transition cursor-pointer font-bold text-[10.5px]"
+                  title="वेरिफाइड एजेंट लॉगिन"
+                >
+                  🛡️ {lang === 'hi' ? 'एजेंट लॉगिन' : 'Agent Login'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAuth('hundred_builders', 'login')}
+                  className="bg-emerald-400/15 hover:bg-emerald-400/25 text-emerald-300 hover:text-emerald-100 border border-emerald-400/40 px-2 py-0.5 rounded-full transition cursor-pointer font-bold text-[10.5px]"
+                  title="हंड्रेड बिल्डर्स लॉगिन"
+                >
+                  🏢 {lang === 'hi' ? 'बिल्डर लॉगिन' : 'Builder Login'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAuth('registered_broker', 'login')}
+                  className="bg-purple-400/15 hover:bg-purple-400/25 text-purple-300 hover:text-purple-100 border border-purple-400/40 px-2 py-0.5 rounded-full transition cursor-pointer font-bold text-[10.5px]"
+                  title="रजिस्टर्ड रियल एस्टेट ब्रोकर लॉगिन"
+                >
+                  📜 {lang === 'hi' ? 'ब्रोकर लॉगिन' : 'Broker Login'}
+                </button>
+              </div>
+            )}
+            <span className="text-slate-700">|</span>
+
             {onOpenAdPackages && (
               <button 
                 id="header-ad-packages-top-btn"
@@ -393,6 +466,226 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </button>
 
+            {/* User Auth Buttons / Dropdown for 4 Roles */}
+            {authUser ? (
+              <div className="relative">
+                <button
+                  id="header-user-menu-btn"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold border border-slate-700 shadow-xs transition cursor-pointer"
+                >
+                  <div className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
+                    {authUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="text-left hidden sm:block">
+                    <div className="leading-tight text-white font-black truncate max-w-[90px]">{authUser.name}</div>
+                    <div className="text-[10px] text-amber-400 font-extrabold leading-none">
+                      {authUser.role === 'owner' && (lang === 'hi' ? 'मालिक' : 'Owner')}
+                      {authUser.role === 'verified_agent' && (lang === 'hi' ? 'वेरिफाइड एजेंट' : 'Agent')}
+                      {authUser.role === 'hundred_builders' && (lang === 'hi' ? 'हंड्रेड बिल्डर्स' : 'Builder')}
+                      {authUser.role === 'registered_broker' && (lang === 'hi' ? 'रजिस्टर्ड ब्रोकर' : 'Broker')}
+                    </div>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <p className="text-xs font-black text-slate-900">{authUser.name}</p>
+                      <p className="text-[11px] text-slate-500">📞 {authUser.phone}</p>
+                      <span className="inline-block mt-1 bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                        {authUser.role === 'owner' && (lang === 'hi' ? 'प्रॉपर्टी मालिक' : 'Property Owner')}
+                        {authUser.role === 'verified_agent' && (lang === 'hi' ? 'वेरिफाइड एजेंट (सत्यापित)' : 'Verified Agent')}
+                        {authUser.role === 'hundred_builders' && (lang === 'hi' ? 'हंड्रेड बिल्डर्स पार्टनर' : 'Hundred Builders Partner')}
+                        {authUser.role === 'registered_broker' && (lang === 'hi' ? 'रजिस्टर्ड रियल एस्टेट ब्रोकर (RERA)' : 'Registered Broker (RERA)')}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => { onOpenPostProperty(); setUserMenuOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-amber-50 hover:text-amber-900 flex items-center space-x-2 font-bold cursor-pointer"
+                    >
+                      <PlusCircle className="w-4 h-4 text-amber-600" />
+                      <span>{lang === 'hi' ? 'नई प्रॉपर्टी लिस्ट करें' : 'Post New Property'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => { onOpenInquiries(); setUserMenuOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-amber-50 hover:text-amber-900 flex items-center space-x-2 font-bold cursor-pointer"
+                    >
+                      <CalendarCheck className="w-4 h-4 text-emerald-600" />
+                      <span>{lang === 'hi' ? 'मेरी साइट विजिट्स / बुकिंग्स' : 'My Site Visits / Inquiries'}</span>
+                    </button>
+
+                    <div className="border-t border-slate-100 my-1"></div>
+
+                    <button
+                      onClick={() => { onLogout(); setUserMenuOpen(false); }}
+                      className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center space-x-2 font-bold cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-500" />
+                      <span>{lang === 'hi' ? 'लॉगआउट (Logout)' : 'Logout'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Dedicated Role Login / Signup Dropdown Button */
+              <div className="relative">
+                <button
+                  id="header-auth-master-btn"
+                  onClick={() => setAuthDropdownOpen(!authDropdownOpen)}
+                  className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-xs shadow-sm transition cursor-pointer active:scale-98 border border-slate-700"
+                  title="मालिक, एजेंट, बिल्डर व ब्रोकर लॉगिन एवं साइनअप"
+                >
+                  <User className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{lang === 'hi' ? 'लॉगिन / साइन-अप' : 'Login / Sign Up'}</span>
+                  <ChevronDown className={`w-3 h-3 text-amber-400 transition-transform ${authDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown with 4 Roles Login & Signup */}
+                {authDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="pb-2 mb-2 border-b border-slate-100 flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                        {lang === 'hi' ? 'अपनी श्रेणी चुनें (Select Role)' : 'Select Your Portal'}
+                      </span>
+                      <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                        4 श्रेणियां
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* 1. Owner */}
+                      <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                            <Home className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-900">
+                              {lang === 'hi' ? 'प्रॉपर्टी लिस्टिंग मालिक' : 'Property Owner'}
+                            </div>
+                            <div className="text-[10px] text-amber-800 font-semibold">
+                              {lang === 'hi' ? '0% ब्रोकरेज • सीधी डील' : '0% Brokerage • Direct'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            onClick={() => { onOpenAuth('owner', 'login'); setAuthDropdownOpen(false); }}
+                            className="bg-white hover:bg-amber-100 text-slate-800 border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                          </button>
+                          <button
+                            onClick={() => { onOpenAuth('owner', 'signup'); setAuthDropdownOpen(false); }}
+                            className="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2. Verified Agent */}
+                      <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200 flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-700 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-900">
+                              {lang === 'hi' ? 'वेरिफाइड एजेंट' : 'Verified Agent'}
+                            </div>
+                            <div className="text-[10px] text-blue-800 font-semibold">
+                              {lang === 'hi' ? 'सत्यापित प्रोफाइल • लीड्स' : 'Verified Badge • Leads'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            onClick={() => { onOpenAuth('verified_agent', 'login'); setAuthDropdownOpen(false); }}
+                            className="bg-white hover:bg-blue-100 text-slate-800 border border-blue-300 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                          </button>
+                          <button
+                            onClick={() => { onOpenAuth('verified_agent', 'signup'); setAuthDropdownOpen(false); }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 3. Hundred Builders */}
+                      <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-900">
+                              {lang === 'hi' ? 'हंड्रेड बिल्डर्स' : 'Hundred Builders'}
+                            </div>
+                            <div className="text-[10px] text-emerald-800 font-semibold">
+                              {lang === 'hi' ? 'रेरा प्रोजेक्ट्स • टाउनशिप' : 'Official Builder Portal'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            onClick={() => { onOpenAuth('hundred_builders', 'login'); setAuthDropdownOpen(false); }}
+                            className="bg-white hover:bg-emerald-100 text-slate-800 border border-emerald-300 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                          </button>
+                          <button
+                            onClick={() => { onOpenAuth('hundred_builders', 'signup'); setAuthDropdownOpen(false); }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 4. Registered Real Estate Broker */}
+                      <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200 flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-700 flex items-center justify-center shrink-0">
+                            <Award className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-900">
+                              {lang === 'hi' ? 'रजिस्टर्ड रियल एस्टेट ब्रोकर' : 'Registered Broker'}
+                            </div>
+                            <div className="text-[10px] text-purple-800 font-semibold">
+                              {lang === 'hi' ? 'RERA अधिकृत ब्रोकर पार्टनर' : 'RERA Certified Network'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            onClick={() => { onOpenAuth('registered_broker', 'login'); setAuthDropdownOpen(false); }}
+                            className="bg-white hover:bg-purple-100 text-slate-800 border border-purple-300 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                          </button>
+                          <button
+                            onClick={() => { onOpenAuth('registered_broker', 'signup'); setAuthDropdownOpen(false); }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Post Property Button (MagicBricks/99acres style prominent CTA) */}
             <button
               id="header-post-property-btn"
@@ -468,6 +761,143 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Mobile Role Authentication Section */}
+          <div className="pb-3 border-b border-slate-100">
+            {authUser ? (
+              <div className="bg-slate-900 text-white p-3 rounded-2xl border border-amber-500/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
+                      {authUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-white">{authUser.name}</div>
+                      <div className="text-[10px] text-amber-400 font-extrabold">
+                        {authUser.role === 'owner' && (lang === 'hi' ? 'प्रॉपर्टी मालिक' : 'Property Owner')}
+                        {authUser.role === 'verified_agent' && (lang === 'hi' ? 'वेरिफाइड एजेंट' : 'Verified Agent')}
+                        {authUser.role === 'hundred_builders' && (lang === 'hi' ? 'हंड्रेड बिल्डर्स पार्टनर' : 'Hundred Builders')}
+                        {authUser.role === 'registered_broker' && (lang === 'hi' ? 'रजिस्टर्ड ब्रोकर' : 'Registered Broker')}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { onLogout(); setMobileMenuOpen(false); }}
+                    className="bg-slate-800 hover:bg-slate-700 text-rose-300 border border-slate-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                  >
+                    {lang === 'hi' ? 'लॉगआउट' : 'Logout'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-900 uppercase">
+                    🔐 {lang === 'hi' ? 'पोर्टल लॉगिन एवं साइन-अप' : 'Portal Login & Sign Up'}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-bold">4 श्रेणियां</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* 1. Owner */}
+                  <div className="p-2 rounded-xl bg-amber-50 border border-amber-200/90 flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5">
+                      <Home className="w-3.5 h-3.5 text-amber-700" />
+                      <span className="text-xs font-black text-slate-900">
+                        {lang === 'hi' ? 'मालिक (Owner)' : 'Owner'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => { onOpenAuth('owner', 'login'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-white text-slate-800 border border-amber-300 rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                      </button>
+                      <button
+                        onClick={() => { onOpenAuth('owner', 'signup'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-amber-600 text-white rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. Verified Agent */}
+                  <div className="p-2 rounded-xl bg-blue-50 border border-blue-200/90 flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
+                      <span className="text-xs font-black text-slate-900">
+                        {lang === 'hi' ? 'वेरिफाइड एजेंट' : 'Agent'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => { onOpenAuth('verified_agent', 'login'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-white text-slate-800 border border-blue-300 rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                      </button>
+                      <button
+                        onClick={() => { onOpenAuth('verified_agent', 'signup'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-blue-600 text-white rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3. Hundred Builders */}
+                  <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200/90 flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+                      <span className="text-xs font-black text-slate-900">
+                        {lang === 'hi' ? 'हंड्रेड बिल्डर्स' : 'Builders'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => { onOpenAuth('hundred_builders', 'login'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-white text-slate-800 border border-emerald-300 rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                      </button>
+                      <button
+                        onClick={() => { onOpenAuth('hundred_builders', 'signup'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-emerald-600 text-white rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4. Registered Broker */}
+                  <div className="p-2 rounded-xl bg-purple-50 border border-purple-200/90 flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5">
+                      <Award className="w-3.5 h-3.5 text-purple-700" />
+                      <span className="text-xs font-black text-slate-900">
+                        {lang === 'hi' ? 'रजिस्टर्ड ब्रोकर' : 'Broker'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => { onOpenAuth('registered_broker', 'login'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-white text-slate-800 border border-purple-300 rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                      </button>
+                      <button
+                        onClick={() => { onOpenAuth('registered_broker', 'signup'); setMobileMenuOpen(false); }}
+                        className="px-2 py-1 bg-purple-600 text-white rounded text-[11px] font-bold cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">

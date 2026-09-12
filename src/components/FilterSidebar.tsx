@@ -357,6 +357,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             { id: 'hundred_builders', label: t.builder },
             { id: 'owner', label: `${t.owner} (0 Brokerage)` },
             { id: 'verified_agent', label: t.verifiedAgent },
+            { id: 'registered_broker', label: lang === 'hi' ? 'रजिस्टर्ड ब्रोकर (RERA)' : 'Registered Broker (RERA)' },
           ].map((item) => (
             <label key={item.id} className="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer">
               <input

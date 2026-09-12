@@ -18,7 +18,7 @@ import {
   Tractor,
   Ruler
 } from 'lucide-react';
-import { Property, PurposeType, PropertyCategory, FurnishingStatus, PossessionStatus, FacingDirection, AgriculturalLandDetails, ResidentialPlotDetails } from '../types';
+import { Property, PurposeType, PropertyCategory, FurnishingStatus, PossessionStatus, FacingDirection, AgriculturalLandDetails, ResidentialPlotDetails, ListedByType, AuthUser } from '../types';
 import { AgriculturalLandAreaForm } from './AgriculturalLandAreaForm';
 import { ResidentialPlotAreaForm } from './ResidentialPlotAreaForm';
 import { Language, translations, amenitiesList } from '../data/translations';
@@ -36,6 +36,7 @@ interface PostPropertyModalProps {
   onClose: () => void;
   onAddProperty: (newProp: Property) => void;
   lang: Language;
+  authUser?: AuthUser | null;
 }
 
 export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
@@ -43,6 +44,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   onClose,
   onAddProperty,
   lang,
+  authUser,
 }) => {
   if (!isOpen) return null;
 
@@ -55,14 +57,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   const [purpose, setPurpose] = useState<PurposeType>('buy');
   const [category, setCategory] = useState<PropertyCategory>('apartment');
   const [title, setTitle] = useState('');
-  const [city, setCity] = useState('Raipur');
+  const [city, setCity] = useState(authUser?.city || 'Raipur');
   const [locality, setLocality] = useState('');
   const [address, setAddress] = useState('');
   const [pincode, setPincode] = useState('');
-  const [societyName, setSocietyName] = useState('');
+  const [societyName, setSocietyName] = useState(authUser?.companyName || '');
 
   // Revenue & Land Record Details (जिला, तहसील, राजस्व निरीक्षक मंडल, ग्राम, खसरा नंबर)
-  const [district, setDistrict] = useState('Raipur');
+  const [district, setDistrict] = useState(authUser?.city || 'Raipur');
   const [tehsil, setTehsil] = useState('');
   const [revenueCircle, setRevenueCircle] = useState('');
   const [village, setVillage] = useState('');
@@ -149,10 +151,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   ]);
   const [customImageUrl, setCustomImageUrl] = useState('');
 
-  const [contactName, setContactName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [listedBy, setListedBy] = useState<'owner' | 'hundred_builders' | 'verified_agent'>('owner');
+  const [contactName, setContactName] = useState(authUser?.name || '');
+  const [contactPhone, setContactPhone] = useState(authUser?.phone || '');
+  const [contactEmail, setContactEmail] = useState(authUser?.email || '');
+  const [listedBy, setListedBy] = useState<ListedByType>(
+    authUser?.role ? (authUser.role as ListedByType) : 'owner'
+  );
   const [honeypot, setHoneypot] = useState('');
 
   const [formError, setFormError] = useState('');
@@ -1029,20 +1033,21 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   {t.listedBy}
                 </label>
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {[
                     { id: 'owner', label: t.owner },
-                    { id: 'hundred_builders', label: t.builder },
                     { id: 'verified_agent', label: t.verifiedAgent },
+                    { id: 'hundred_builders', label: t.builder },
+                    { id: 'registered_broker', label: lang === 'hi' ? 'रजिस्टर्ड ब्रोकर' : 'Broker (RERA)' },
                   ].map((item) => (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setListedBy(item.id as any)}
-                      className={`py-2.5 rounded-xl font-bold text-xs text-center border cursor-pointer ${
+                      onClick={() => setListedBy(item.id as ListedByType)}
+                      className={`py-2.5 px-1 rounded-xl font-bold text-xs text-center border cursor-pointer transition ${
                         listedBy === item.id
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : 'bg-slate-50 text-slate-700 border-slate-200'
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       {item.label}

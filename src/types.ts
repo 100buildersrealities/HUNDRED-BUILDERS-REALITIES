@@ -12,8 +12,26 @@ export type PropertyCategory =
 
 export type FurnishingStatus = 'furnished' | 'semi_furnished' | 'unfurnished';
 export type PossessionStatus = 'ready_to_move' | 'under_construction';
-export type ListedByType = 'owner' | 'hundred_builders' | 'verified_agent';
+export type ListedByType = 'owner' | 'hundred_builders' | 'verified_agent' | 'registered_broker';
 export type FacingDirection = 'East' | 'North' | 'North-East' | 'West' | 'South' | 'South-East';
+
+export type UserRole = 'owner' | 'verified_agent' | 'hundred_builders' | 'registered_broker';
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  role: UserRole;
+  city?: string;
+  reraNumber?: string;       // For registered_broker or builder
+  agencyName?: string;       // For verified_agent or broker
+  companyName?: string;      // For hundred_builders
+  experienceYears?: string;  // For agent or broker
+  isVerified?: boolean;
+  avatarUrl?: string;
+  createdAt: string;
+}
 
 export type AgriAreaUnit = 'acre' | 'dismil' | 'bigha' | 'hectare' | 'sqft' | 'sqm';
 
