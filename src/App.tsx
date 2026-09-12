@@ -1,0 +1,803 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Building2, 
+  Sparkles, 
+  Grid, 
+  List, 
+  ArrowUpDown, 
+  SlidersHorizontal, 
+  Heart, 
+  ShieldCheck, 
+  PlusCircle, 
+  CheckCircle2, 
+  PhoneCall, 
+  MapPin, 
+  Search, 
+  CalendarCheck,
+  TrendingUp,
+  X,
+  Megaphone
+} from 'lucide-react';
+import { 
+  Property, 
+  FilterState, 
+  PurposeType, 
+  SiteVisitBooking 
+} from './types';
+import { Language, translations, INDIAN_LANGUAGES } from './data/translations';
+import { initialProperties, CITIES_LIST, CHHATTISGARH_CITIES, MADHYA_PRADESH_CITIES, ALL_CHHATTISGARH_OPTION, ALL_MADHYA_PRADESH_OPTION } from './data/mockProperties';
+import { Header } from './components/Header';
+import { HeroSearch } from './components/HeroSearch';
+import { PropertyCard } from './components/PropertyCard';
+import { FilterSidebar } from './components/FilterSidebar';
+import { PropertyDetailModal } from './components/PropertyDetailModal';
+import { PostPropertyModal } from './components/PostPropertyModal';
+import { EmiCalculatorModal } from './components/EmiCalculatorModal';
+import { CompareDrawer } from './components/CompareDrawer';
+import { InquiryModal } from './components/InquiryModal';
+import { ShortlistDrawer } from './components/ShortlistDrawer';
+import { ValuationModal } from './components/ValuationModal';
+import { InquiriesListModal } from './components/InquiriesListModal';
+import { CareerCareModal } from './components/CareerCareModal';
+import { SecurityTrustModal } from './components/SecurityTrustModal';
+import { AdvertisementPackagesModal } from './components/AdvertisementPackagesModal';
+import { Footer } from './components/Footer';
+import { secureStore, secureRetrieve } from './utils/security';
+
+export default function App() {
+  // Language state (defaults to Hindi as requested by the user, easily switchable to English)
+  const [lang, setLang] = useState<Language>('hi');
+
+  // Properties State (loads user-added listings from localStorage)
+  // Properties State (loads user-added listings with tamper-evident secure storage)
+  const [properties, setProperties] = useState<Property[]>(() => {
+    try {
+      const saved = secureRetrieve<Property[] | null>('hb_realities_properties', null);
+      if (saved && Array.isArray(saved)) {
+        return [...saved, ...initialProperties.filter(ip => !saved.some((p: Property) => p.id === ip.id))];
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return initialProperties;
+  });
+
+  // Shortlisted Properties IDs (tamper-evident storage)
+  const [shortlistIds, setShortlistIds] = useState<string[]>(() => {
+    return secureRetrieve<string[]>('hb_shortlist', ['hb-101']);
+  });
+
+  // Compare List Properties IDs (up to 3)
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+
+  // Site Visits Bookings (tamper-evident storage)
+  const [siteVisits, setSiteVisits] = useState<SiteVisitBooking[]>(() => {
+    return secureRetrieve<SiteVisitBooking[]>('hb_site_visits', []);
+  });
+
+  // Filter State
+  const [filters, setFilters] = useState<FilterState>({
+    purpose: 'buy',
+    city: 'All Cities',
+    searchQuery: '',
+    category: 'all',
+    bhk: [],
+    minPrice: 10000,
+    maxPrice: 50000000,
+    furnishing: [],
+    possession: [],
+    listedBy: [],
+    amenities: [],
+    verifiedOnly: false,
+    hundredBuildersOnly: false,
+    sortBy: 'relevance',
+  });
+
+  // View Mode: Grid or List
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+
+  // Modals & Drawers
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [inquiryProperty, setInquiryProperty] = useState<Property | null>(null);
+  const [isPostPropertyOpen, setIsPostPropertyOpen] = useState(false);
+  const [isEmiCalcOpen, setIsEmiCalcOpen] = useState(false);
+  const [isValuationOpen, setIsValuationOpen] = useState(false);
+  const [isShortlistOpen, setIsShortlistOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [isInquiriesOpen, setIsInquiriesOpen] = useState(false);
+  const [isCareerCareOpen, setIsCareerCareOpen] = useState(false);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [isAdPackagesOpen, setIsAdPackagesOpen] = useState(false);
+
+  // Toast Notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const t = translations[lang];
+
+  // Save to secureStorage when properties change
+  useEffect(() => {
+    try {
+      const userAdded = properties.filter(p => p.id.startsWith('user-'));
+      secureStore('hb_realities_properties', userAdded);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [properties]);
+
+  // Save shortlist securely
+  useEffect(() => {
+    try {
+      secureStore('hb_shortlist', shortlistIds);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [shortlistIds]);
+
+  // Save site visits securely
+  useEffect(() => {
+    try {
+      secureStore('hb_site_visits', siteVisits);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [siteVisits]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleToggleLang = () => {
+    setLang((prev) => (prev === 'en' ? 'hi' : 'en'));
+  };
+
+  const handleSelectLanguage = (newLang: Language) => {
+    setLang(newLang);
+    const langInfo = INDIAN_LANGUAGES.find((l) => l.code === newLang);
+    if (langInfo) {
+      showToast(`भाषा: ${langInfo.nameNative} (${langInfo.nameEn}) में सफलतापूर्वक बदली गई`);
+    }
+  };
+
+  const handleSelectCity = (city: string) => {
+    setFilters((prev) => ({ ...prev, city }));
+  };
+
+  const handleSelectTab = (purpose: PurposeType) => {
+    setFilters((prev) => ({
+      ...prev,
+      purpose,
+      category: purpose === 'agriculture' ? 'agricultural_land' : (prev.category === 'agricultural_land' ? 'all' : prev.category),
+      minPrice: purpose === 'rent' ? 10000 : (purpose === 'lease' ? 15000 : (purpose === 'agriculture' ? 500000 : 1500000)),
+      maxPrice: purpose === 'rent' ? 250000 : (purpose === 'lease' ? 1000000 : 50000000),
+    }));
+  };
+
+  const handleToggleShortlist = (propertyId: string) => {
+    setShortlistIds((prev) => {
+      const exists = prev.includes(propertyId);
+      const updated = exists ? prev.filter(id => id !== propertyId) : [...prev, propertyId];
+      showToast(
+        exists 
+          ? (lang === 'hi' ? 'प्रॉपर्टी को शॉर्टलिस्ट से हटा दिया गया।' : 'Removed from shortlist.') 
+          : (lang === 'hi' ? 'प्रॉपर्टी को पसंदीदा में सेव कर लिया गया!' : 'Added to favorites!')
+      );
+      return updated;
+    });
+  };
+
+  const handleToggleCompare = (property: Property) => {
+    setCompareIds((prev) => {
+      const exists = prev.includes(property.id);
+      if (exists) {
+        return prev.filter(id => id !== property.id);
+      }
+      if (prev.length >= 3) {
+        showToast(lang === 'hi' ? 'आप अधिकतम 3 संपत्तियों की तुलना कर सकते हैं।' : 'Maximum 3 properties can be compared.');
+        return prev;
+      }
+      showToast(lang === 'hi' ? 'तुलना सूची में जोड़ा गया।' : 'Added to comparison.');
+      return [...prev, property.id];
+    });
+  };
+
+  const handleAddProperty = (newProp: Property) => {
+    setProperties((prev) => [newProp, ...prev]);
+    setIsPostPropertyOpen(false);
+    showToast(t.listingSuccessMsg);
+    setSelectedProperty(newProp);
+  };
+
+  const handleConfirmBooking = (booking: SiteVisitBooking) => {
+    setSiteVisits((prev) => [booking, ...prev]);
+    showToast(lang === 'hi' ? 'साइट विजिट सफलतापूर्वक बुक हो गई है!' : 'Site visit booked successfully!');
+  };
+
+  const handleRemoveBooking = (id: string) => {
+    setSiteVisits((prev) => prev.filter(b => b.id !== id));
+  };
+
+  // Filtered & Sorted Properties computation
+  const filteredProperties = useMemo(() => {
+    return properties.filter((prop) => {
+      // Purpose match
+      if (filters.purpose === 'agriculture') {
+        if (prop.purpose !== 'agriculture' && prop.category !== 'agricultural_land') return false;
+      } else if (filters.purpose === 'lease') {
+        if (prop.purpose !== 'lease') return false;
+      } else {
+        if (prop.purpose !== filters.purpose) return false;
+      }
+
+      // City match
+      if (filters.city !== 'All Cities') {
+        const isAllCg = filters.city.toLowerCase().includes('chhattisgarh') || filters.city.toLowerCase().includes('छत्तीसगढ़');
+        const isAllMp = filters.city.toLowerCase().includes('madhya pradesh') || filters.city.toLowerCase().includes('मध्य प्रदेश');
+        if (isAllCg) {
+          const isPropInCg = prop.state === 'Chhattisgarh' || CHHATTISGARH_CITIES.some(c => c.toLowerCase() === prop.city.toLowerCase());
+          if (!isPropInCg) return false;
+        } else if (isAllMp) {
+          const isPropInMp = prop.state === 'Madhya Pradesh' || MADHYA_PRADESH_CITIES.some(c => c.toLowerCase() === prop.city.toLowerCase());
+          if (!isPropInMp) return false;
+        } else if (prop.city.toLowerCase() !== filters.city.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Search Query (title, locality, city, state, builder, rera, cg/mp keywords, khasra, village)
+      if (filters.searchQuery.trim()) {
+        const query = filters.searchQuery.toLowerCase().trim();
+        const matchesTitle = prop.title.toLowerCase().includes(query) || prop.titleHi.toLowerCase().includes(query);
+        const matchesLocality = prop.locality.toLowerCase().includes(query);
+        const matchesCity = prop.city.toLowerCase().includes(query);
+        const matchesState = prop.state ? prop.state.toLowerCase().includes(query) : false;
+        const matchesAddress = prop.address.toLowerCase().includes(query);
+        const matchesRera = prop.reraId ? prop.reraId.toLowerCase().includes(query) : false;
+        const matchesKhasra = prop.khasraNumber ? prop.khasraNumber.toLowerCase().includes(query) : false;
+        const matchesVillage = prop.village ? prop.village.toLowerCase().includes(query) : false;
+        const matchesTehsil = prop.tehsil ? prop.tehsil.toLowerCase().includes(query) : false;
+        const matchesAgriKeyword = (query.includes('agri') || query.includes('कृषि') || query.includes('खेती') || query.includes('फार्म') || query.includes('जमीन') || query.includes('borewell') || query.includes('सिंचित') || query.includes('बागीचा') || query.includes('हाईवे')) && (prop.purpose === 'agriculture' || prop.category === 'agricultural_land');
+        const matchesCgKeyword = (query === 'cg' || query.includes('chhattisgarh') || query.includes('छत्तीसगढ़')) && 
+          (prop.state === 'Chhattisgarh' || CHHATTISGARH_CITIES.some(c => c.toLowerCase() === prop.city.toLowerCase()));
+        const matchesMpKeyword = (query === 'mp' || query.includes('madhya pradesh') || query.includes('मध्य प्रदेश') || query.includes('मप्र') || query.includes('एमपी')) && 
+          (prop.state === 'Madhya Pradesh' || MADHYA_PRADESH_CITIES.some(c => c.toLowerCase() === prop.city.toLowerCase()));
+        
+        if (!matchesTitle && !matchesLocality && !matchesCity && !matchesState && !matchesAddress && !matchesRera && !matchesKhasra && !matchesVillage && !matchesTehsil && !matchesAgriKeyword && !matchesCgKeyword && !matchesMpKeyword) {
+          return false;
+        }
+      }
+
+      // Category match
+      if (filters.category !== 'all' && prop.category !== filters.category) {
+        return false;
+      }
+
+      // BHK match
+      if (filters.bhk.length > 0 && prop.bhk) {
+        if (!filters.bhk.includes(prop.bhk)) return false;
+      }
+
+      // Price range
+      if (prop.price < filters.minPrice || prop.price > filters.maxPrice) {
+        return false;
+      }
+
+      // Furnishing
+      if (filters.furnishing.length > 0 && !filters.furnishing.includes(prop.furnishing)) {
+        return false;
+      }
+
+      // Possession
+      if (filters.possession.length > 0 && !filters.possession.includes(prop.possession)) {
+        return false;
+      }
+
+      // Listed By
+      if (filters.listedBy.length > 0 && !filters.listedBy.includes(prop.listedBy)) {
+        return false;
+      }
+
+      // Verified Only
+      if (filters.verifiedOnly && !prop.isVerified) {
+        return false;
+      }
+
+      // Hundred Builders Only
+      if (filters.hundredBuildersOnly && !prop.isExclusiveHundredBuilders) {
+        return false;
+      }
+
+      // Amenities filter
+      if (filters.amenities.length > 0) {
+        const hasAllAmenities = filters.amenities.every(a => prop.amenities.includes(a));
+        if (!hasAllAmenities) return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (filters.sortBy === 'price_low_high') return a.price - b.price;
+      if (filters.sortBy === 'price_high_low') return b.price - a.price;
+      if (filters.sortBy === 'area_high_low') return b.carpetAreaSqFt - a.carpetAreaSqFt;
+      if (filters.sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      // Default: relevance with Hundred Builders featured prioritized
+      if (a.isExclusiveHundredBuilders && !b.isExclusiveHundredBuilders) return -1;
+      if (!a.isExclusiveHundredBuilders && b.isExclusiveHundredBuilders) return 1;
+      return 0;
+    });
+  }, [properties, filters]);
+
+  const shortlistedProperties = useMemo(() => {
+    return properties.filter(p => shortlistIds.includes(p.id));
+  }, [properties, shortlistIds]);
+
+  const comparedProperties = useMemo(() => {
+    return properties.filter(p => compareIds.includes(p.id));
+  }, [properties, compareIds]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-amber-500 selection:text-white">
+      
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center space-x-2.5 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="text-xs font-bold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Main App Navigation Header */}
+      <Header
+        lang={lang}
+        onToggleLang={handleToggleLang}
+        onSelectLanguage={handleSelectLanguage}
+        selectedCity={filters.city}
+        onSelectCity={handleSelectCity}
+        onOpenPostProperty={() => setIsPostPropertyOpen(true)}
+        onOpenCareerCare={() => setIsCareerCareOpen(true)}
+        onOpenEmiCalc={() => setIsEmiCalcOpen(true)}
+        onOpenValuation={() => setIsValuationOpen(true)}
+        onOpenShortlist={() => setIsShortlistOpen(true)}
+        onOpenCompare={() => setIsCompareOpen(true)}
+        onOpenInquiries={() => setIsInquiriesOpen(true)}
+        onOpenSecurityTrust={() => setIsSecurityModalOpen(true)}
+        onOpenAdPackages={() => setIsAdPackagesOpen(true)}
+        shortlistCount={shortlistIds.length}
+        compareCount={compareIds.length}
+        inquiryCount={siteVisits.length}
+        activeTab={filters.purpose}
+        onSelectTab={handleSelectTab}
+      />
+
+      {/* Hero Search Engine (MagicBricks & 99Acres Style) */}
+      <HeroSearch
+        lang={lang}
+        activePurpose={filters.purpose}
+        onSelectPurpose={handleSelectTab}
+        searchQuery={filters.searchQuery}
+        onSearchChange={(q) => setFilters(prev => ({ ...prev, searchQuery: q }))}
+        selectedCity={filters.city}
+        onSelectCity={(city) => setFilters(prev => ({ ...prev, city }))}
+        selectedBhk={filters.bhk}
+        onToggleBhk={(b) => {
+          setFilters(prev => ({
+            ...prev,
+            bhk: prev.bhk.includes(b) ? prev.bhk.filter(item => item !== b) : [...prev.bhk, b]
+          }));
+        }}
+        selectedCategory={filters.category}
+        onSelectCategory={(cat) => setFilters(prev => ({ ...prev, category: cat }))}
+        onExecuteSearch={() => {
+          // Smooth scroll to catalog
+          document.getElementById('property-catalog-section')?.scrollIntoView({ behavior: 'smooth' });
+        }}
+        totalListingsCount={properties.length}
+      />
+
+      {/* Main Content Area: Catalog + Filter Sidebar */}
+      <main id="property-catalog-section" className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        {/* Section Top Controls (Title, Filter Pills, View Mode Switcher, Sorting) */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200/80 mb-6">
+          <div>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {filters.city !== 'All Cities' ? `${filters.city} - ` : ''}
+                {lang === 'hi' 
+                  ? `${t[filters.purpose]} के लिए उपलब्ध प्रॉपर्टीज` 
+                  : `Properties for ${t[filters.purpose]}`}
+              </h2>
+              <span className="bg-amber-100 text-amber-800 text-xs font-black px-2.5 py-0.5 rounded-full">
+                {filteredProperties.length}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {lang === 'hi' 
+                ? 'वेरिफाइड ओनर व हंड्रेड बिल्डर्स प्रोजेक्ट्स से सीधी बातचीत' 
+                : 'Verified listings with direct owner contact and Hundred Builders exclusive developments'}
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2.5 flex-wrap gap-y-2">
+            
+            {/* Mobile Filter Toggle Button */}
+            <button
+              onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+              className="lg:hidden flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 shadow-2xs cursor-pointer"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-amber-600" />
+              <span>{t.filters}</span>
+            </button>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-semibold text-slate-700">
+              <ArrowUpDown className="w-3.5 h-3.5 text-amber-600" />
+              <span>{t.sortBy}:</span>
+              <select
+                value={filters.sortBy}
+                onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as any }))}
+                className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer"
+              >
+                <option value="relevance">{t.sortRelevance}</option>
+                <option value="price_low_high">{t.sortPriceLow}</option>
+                <option value="price_high_low">{t.sortPriceHigh}</option>
+                <option value="newest">{t.sortNewest}</option>
+                <option value="area_high_low">{t.sortAreaHigh}</option>
+              </select>
+            </div>
+
+            {/* Grid / List Switcher */}
+            <div className="hidden sm:flex items-center bg-white rounded-xl border border-slate-200 p-1 shadow-2xs">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === 'grid' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                }`}
+                title="Grid View"
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === 'list' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                }`}
+                title="List View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Catalog Layout: Sidebar on Left, Property Cards on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+          
+          {/* Desktop Filter Sidebar */}
+          <div className="hidden lg:block lg:col-span-1 sticky top-28">
+            <FilterSidebar
+              filters={filters}
+              onFilterChange={(newF) => setFilters(prev => ({ ...prev, ...newF }))}
+              onResetFilters={() => setFilters({
+                purpose: filters.purpose,
+                city: 'All Cities',
+                searchQuery: '',
+                category: 'all',
+                bhk: [],
+                minPrice: filters.purpose === 'rent' ? 10000 : 1500000,
+                maxPrice: filters.purpose === 'rent' ? 250000 : 50000000,
+                furnishing: [],
+                possession: [],
+                listedBy: [],
+                amenities: [],
+                verifiedOnly: false,
+                hundredBuildersOnly: false,
+                sortBy: 'relevance',
+              })}
+              lang={lang}
+              totalFiltered={filteredProperties.length}
+            />
+          </div>
+
+          {/* Mobile Filter Drawer */}
+          {mobileFilterOpen && (
+            <div className="lg:hidden fixed inset-0 z-50 bg-slate-950/70 p-4 flex flex-col justify-end">
+              <div className="bg-white rounded-3xl p-5 max-h-[85vh] overflow-y-auto space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <h3 className="font-bold text-sm text-slate-900">{t.filters}</h3>
+                  <button onClick={() => setMobileFilterOpen(false)} className="p-1 text-slate-400">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <FilterSidebar
+                  filters={filters}
+                  onFilterChange={(newF) => setFilters(prev => ({ ...prev, ...newF }))}
+                  onResetFilters={() => setFilters({
+                    purpose: filters.purpose,
+                    city: 'All Cities',
+                    searchQuery: '',
+                    category: 'all',
+                    bhk: [],
+                    minPrice: filters.purpose === 'rent' ? 10000 : 1500000,
+                    maxPrice: filters.purpose === 'rent' ? 250000 : 50000000,
+                    furnishing: [],
+                    possession: [],
+                    listedBy: [],
+                    amenities: [],
+                    verifiedOnly: false,
+                    hundredBuildersOnly: false,
+                    sortBy: 'relevance',
+                  })}
+                  lang={lang}
+                  totalFiltered={filteredProperties.length}
+                />
+                <button
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="w-full bg-amber-600 text-white font-bold py-3 rounded-xl text-xs"
+                >
+                  {t.applyFilters}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Property Cards Grid / List */}
+          <div className="lg:col-span-3 space-y-6">
+            
+            {filteredProperties.length === 0 ? (
+              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
+                <Search className="w-12 h-12 text-slate-300 mx-auto" />
+                <h3 className="text-lg font-bold text-slate-900">{t.noPropertiesFound}</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  {lang === 'hi' 
+                    ? 'कृपया अपने सर्च कीवर्ड्स या फ़िल्टर जैसे कीमत और BHK बदलकर पुनः प्रयास करें।' 
+                    : 'Try clearing your search query or broadening the price and bedroom filters.'}
+                </p>
+                <button
+                  onClick={() => setFilters(prev => ({
+                    ...prev,
+                    city: 'All Cities',
+                    searchQuery: '',
+                    category: 'all',
+                    bhk: [],
+                    minPrice: prev.purpose === 'rent' ? 10000 : 1500000,
+                    maxPrice: prev.purpose === 'rent' ? 250000 : 50000000,
+                    furnishing: [],
+                    possession: [],
+                    listedBy: [],
+                    amenities: [],
+                    verifiedOnly: false,
+                    hundredBuildersOnly: false,
+                  }))}
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition cursor-pointer shadow-sm"
+                >
+                  {t.clearAll}
+                </button>
+              </div>
+            ) : (
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'space-y-4'}>
+                {filteredProperties.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    lang={lang}
+                    isShortlisted={shortlistIds.includes(property.id)}
+                    onToggleShortlist={handleToggleShortlist}
+                    isCompared={compareIds.includes(property.id)}
+                    onToggleCompare={handleToggleCompare}
+                    onViewDetails={(p) => setSelectedProperty(p)}
+                    onBookVisit={(p) => setInquiryProperty(p)}
+                    viewMode={viewMode}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Post Property Banner CTA & Advertisement Packages Banner */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Free Listing Banner */}
+              <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 rounded-3xl p-6 sm:p-7 text-slate-950 flex flex-col justify-between gap-5 shadow-xl">
+                <div className="space-y-1 text-left">
+                  <span className="text-xs font-extrabold uppercase tracking-widest bg-slate-950 text-white px-2.5 py-1 rounded-md inline-block">
+                    100% Free Listing
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-950 pt-1">
+                    {lang === 'hi' ? 'संपत्ति बेचना या किराए पर देना चाहते हैं?' : 'Are you an Owner with Property?'}
+                  </h3>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-900">
+                    {lang === 'hi' 
+                      ? 'हंड्रेड बिल्डर्स पर मुफ्त में अपनी व्यक्तिगत प्रॉपर्टी लिस्ट करें और सक्रिय खरीदारों से तुरंत जुड़ें।' 
+                      : 'List your flat, villa, land, or shop with zero listing fees and connect with verified buyers.'}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setIsPostPropertyOpen(true)}
+                  className="bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-xl shadow-lg transition cursor-pointer shrink-0 flex items-center justify-center space-x-2 w-full sm:w-auto self-start"
+                >
+                  <PlusCircle className="w-4 h-4 text-amber-400" />
+                  <span>{t.postPropertyBtn}</span>
+                </button>
+              </div>
+
+              {/* Paid Advertisement Packages Banner */}
+              <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between gap-5 shadow-xl border border-amber-500/40 relative overflow-hidden">
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div className="space-y-1 text-left relative z-10">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-black uppercase tracking-widest bg-amber-500 text-slate-950 px-2.5 py-1 rounded-md inline-flex items-center space-x-1 shadow-sm">
+                      <Megaphone className="w-3.5 h-3.5" />
+                      <span>{lang === 'hi' ? 'सशुल्क विज्ञापन' : 'Paid Ads'}</span>
+                    </span>
+                    <span className="text-[11px] font-bold text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/30">
+                      ₹199 से शुरू
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-black text-white pt-1">
+                    {lang === 'hi' ? 'बिल्डर, ब्रोकर, इन्वेस्टर व संस्था हेतु विज्ञापन' : 'Ad Packages for Builders, Brokers & Investors'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-300">
+                    {lang === 'hi' 
+                      ? 'Starter, Basic, Professional, Builder, Premium व Business प्लान्स। प्रोजेक्ट गैलरी, टॉप लिस्टिंग व सीधी लीड्स।' 
+                      : 'High-visibility advertisement slots, featured placements, top ranking & direct inquiries across India.'}
+                  </p>
+                </div>
+
+                <button
+                  id="main-explore-ad-packages-btn"
+                  onClick={() => setIsAdPackagesOpen(true)}
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm px-6 py-3 rounded-xl shadow-lg transition cursor-pointer shrink-0 flex items-center justify-center space-x-2 w-full sm:w-auto self-start relative z-10"
+                >
+                  <Megaphone className="w-4 h-4 text-slate-950" />
+                  <span>{lang === 'hi' ? 'विज्ञापन पैकेज चुनें (₹199 - ₹9,999) →' : 'View Ad Packages (From ₹199) →'}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </main>
+
+      {/* Modals & Drawers */}
+      <PropertyDetailModal
+        property={selectedProperty}
+        onClose={() => setSelectedProperty(null)}
+        lang={lang}
+        isShortlisted={selectedProperty ? shortlistIds.includes(selectedProperty.id) : false}
+        onToggleShortlist={handleToggleShortlist}
+        isCompared={selectedProperty ? compareIds.includes(selectedProperty.id) : false}
+        onToggleCompare={handleToggleCompare}
+        onBookVisit={(p) => {
+          setSelectedProperty(null);
+          setInquiryProperty(p);
+        }}
+      />
+
+      <PostPropertyModal
+        isOpen={isPostPropertyOpen}
+        onClose={() => setIsPostPropertyOpen(false)}
+        onAddProperty={handleAddProperty}
+        lang={lang}
+      />
+
+      <EmiCalculatorModal
+        isOpen={isEmiCalcOpen}
+        onClose={() => setIsEmiCalcOpen(false)}
+        lang={lang}
+      />
+
+      <ValuationModal
+        isOpen={isValuationOpen}
+        onClose={() => setIsValuationOpen(false)}
+        lang={lang}
+        onOpenPostProperty={() => {
+          setIsValuationOpen(false);
+          setIsPostPropertyOpen(true);
+        }}
+      />
+
+      <CompareDrawer
+        isOpen={isCompareOpen}
+        onClose={() => setIsCompareOpen(false)}
+        comparedProperties={comparedProperties}
+        onRemoveFromCompare={(id) => setCompareIds(prev => prev.filter(i => i !== id))}
+        onClearCompare={() => setCompareIds([])}
+        lang={lang}
+        onViewProperty={(p) => setSelectedProperty(p)}
+      />
+
+      <InquiryModal
+        property={inquiryProperty}
+        onClose={() => setInquiryProperty(null)}
+        onConfirmBooking={handleConfirmBooking}
+        lang={lang}
+      />
+
+      <ShortlistDrawer
+        isOpen={isShortlistOpen}
+        onClose={() => setIsShortlistOpen(false)}
+        shortlistedProperties={shortlistedProperties}
+        onRemoveShortlist={handleToggleShortlist}
+        onClearShortlist={() => setShortlistIds([])}
+        lang={lang}
+        onViewProperty={(p) => setSelectedProperty(p)}
+      />
+
+      <InquiriesListModal
+        isOpen={isInquiriesOpen}
+        onClose={() => setIsInquiriesOpen(false)}
+        bookings={siteVisits}
+        onRemoveBooking={handleRemoveBooking}
+        lang={lang}
+      />
+
+      {/* Career Care - Broker Partner Free Registration Modal */}
+      <CareerCareModal
+        isOpen={isCareerCareOpen}
+        onClose={() => setIsCareerCareOpen(false)}
+        lang={lang}
+      />
+
+      {/* Comprehensive Real Estate Footer */}
+      <Footer
+        lang={lang}
+        onSelectCity={handleSelectCity}
+        onSelectTab={handleSelectTab}
+        onOpenPostProperty={() => setIsPostPropertyOpen(true)}
+        onOpenCareerCare={() => setIsCareerCareOpen(true)}
+        onOpenEmiCalc={() => setIsEmiCalcOpen(true)}
+        onOpenValuation={() => setIsValuationOpen(true)}
+        onOpenSecurityTrust={() => setIsSecurityModalOpen(true)}
+        onOpenAdPackages={() => setIsAdPackagesOpen(true)}
+      />
+
+      {/* Security & Anti-Hack Trust Center Modal */}
+      <SecurityTrustModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+        lang={lang}
+      />
+
+      {/* Paid Advertisement Packages Modal */}
+      <AdvertisementPackagesModal
+        isOpen={isAdPackagesOpen}
+        onClose={() => setIsAdPackagesOpen(false)}
+        lang={lang}
+      />
+
+      {/* Floating Buttons: Security Shield (Bottom-Left) & Ad Packages (Bottom-Right) */}
+      <div className="fixed bottom-4 left-4 z-30 hidden sm:block">
+        <button
+          type="button"
+          onClick={() => setIsSecurityModalOpen(true)}
+          className="bg-slate-900/95 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-full border border-emerald-500/50 shadow-2xl backdrop-blur-md flex items-center space-x-2 transition cursor-pointer hover:border-emerald-400 group active:scale-95"
+          title="एंटी-हैक साइबर सुरक्षा स्थिति देखें (100% Secure)"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+          <span className="text-[11px] font-mono text-emerald-300 tracking-wide">100% ANTI-HACK SHIELD</span>
+        </button>
+      </div>
+
+      {/* Floating Advertisement Packages Quick Launcher */}
+      <div className="fixed bottom-4 right-4 z-30 hidden sm:block">
+        <button
+          id="floating-ad-packages-btn"
+          type="button"
+          onClick={() => setIsAdPackagesOpen(true)}
+          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black px-4 py-2.5 rounded-full border border-amber-300 shadow-2xl backdrop-blur-md flex items-center space-x-2 transition cursor-pointer hover:scale-105 active:scale-95"
+          title="सशुल्क विज्ञापन पैकेज - व्यक्ति, बिल्डर, ब्रोकर व संस्था (₹199 से)"
+        >
+          <Megaphone className="w-4 h-4 text-slate-950 animate-bounce" />
+          <span>{lang === 'hi' ? 'विज्ञापन पैकेज (₹199 से)' : 'Ad Packages (₹199+)'}</span>
+        </button>
+      </div>
+
+    </div>
+  );
+}
