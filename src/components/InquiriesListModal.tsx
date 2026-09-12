@@ -7,10 +7,15 @@ import {
   Phone, 
   Mail, 
   Clock, 
-  CheckCircle2 
+  CheckCircle2,
+  MessageSquare,
+  ExternalLink
 } from 'lucide-react';
 import { SiteVisitBooking } from '../types';
 import { Language, translations } from '../data/translations';
+
+const WHATSAPP_NOTIFICATION_NUMBER = '917805980006';
+const WHATSAPP_DISPLAY_NUMBER = '+91 78059-80006';
 
 interface InquiriesListModalProps {
   isOpen: boolean;
@@ -30,6 +35,22 @@ export const InquiriesListModal: React.FC<InquiriesListModalProps> = ({
   if (!isOpen) return null;
 
   const t = translations[lang];
+
+  const handleSendWhatsAppNotification = (b: SiteVisitBooking) => {
+    const text = 
+`🚨 *साइट विजिट बुकिंग रिमाइंडर / अलर्ट (100 BUILDERS REALITIES)* 🚨
+
+👤 *ग्राहक:* ${b.userName}
+📞 *फोन:* ${b.userPhone}
+${b.userEmail && b.userEmail !== 'user@example.com' ? `📧 *ईमेल:* ${b.userEmail}\n` : ''}
+🏢 *प्रॉपर्टी:* ${b.propertyTitle}
+📅 *विजिट तारीख:* ${b.preferredDate}
+⏰ *समय:* ${b.preferredTimeSlot}
+${b.notes ? `📝 *नोट:* ${b.notes}\n` : ''}
+🌐 *100 BUILDERS REALITIES*`;
+
+    window.open(`https://wa.me/${WHATSAPP_NOTIFICATION_NUMBER}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div id="inquiries-list-modal" className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
@@ -115,6 +136,19 @@ export const InquiriesListModal: React.FC<InquiriesListModalProps> = ({
                     "{b.notes}"
                   </p>
                 )}
+
+                <div className="pt-2 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSendWhatsAppNotification(b)}
+                    className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 py-1.5 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer"
+                    title={`Send WhatsApp Alert to ${WHATSAPP_DISPLAY_NUMBER}`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>व्हाट्सएप अलर्ट ({WHATSAPP_DISPLAY_NUMBER})</span>
+                    <ExternalLink className="w-3 h-3 opacity-60" />
+                  </button>
+                </div>
               </div>
             ))
           )}

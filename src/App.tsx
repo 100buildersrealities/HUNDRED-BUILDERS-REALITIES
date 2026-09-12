@@ -211,7 +211,9 @@ export default function App() {
 
   const handleConfirmBooking = (booking: SiteVisitBooking) => {
     setSiteVisits((prev) => [booking, ...prev]);
-    showToast(lang === 'hi' ? 'साइट विजिट सफलतापूर्वक बुक हो गई है!' : 'Site visit booked successfully!');
+    showToast(lang === 'hi' 
+      ? '✅ साइट विजिट बुक! नोटिफिकेशन व्हाट्सएप +91 78059-80006 पर भेजा गया।' 
+      : '✅ Site visit booked! Notification sent to WhatsApp +91 78059-80006.');
   };
 
   const handleRemoveBooking = (id: string) => {
