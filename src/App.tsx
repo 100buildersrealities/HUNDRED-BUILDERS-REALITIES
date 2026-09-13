@@ -16,7 +16,8 @@ import {
   CalendarCheck,
   TrendingUp,
   X,
-  Megaphone
+  Megaphone,
+  Home
 } from 'lucide-react';
 import { 
   Property, 
@@ -117,20 +118,22 @@ export default function App() {
     try {
       const deletedIds = secureRetrieve<string[]>('hb_deleted_property_ids', []) || [];
       const saved = secureRetrieve<Property[] | null>('hb_realities_properties', null);
-      let list: Property[] = initialProperties;
+      let list: Property[] = [];
       if (saved && Array.isArray(saved)) {
-        list = [...saved, ...initialProperties.filter(ip => !saved.some((p: Property) => p.id === ip.id))];
+        // Retain only genuine user listings and filter out any legacy demo properties (starting with 'hb-')
+        list = saved.filter((p: Property) => p && p.id && !p.id.startsWith('hb-'));
       }
       return list.filter(p => !deletedIds.includes(p.id));
     } catch (e) {
       console.error(e);
     }
-    return initialProperties;
+    return [];
   });
 
   // Shortlisted Properties IDs (tamper-evident storage)
   const [shortlistIds, setShortlistIds] = useState<string[]>(() => {
-    return secureRetrieve<string[]>('hb_shortlist', ['hb-101']);
+    const saved = secureRetrieve<string[]>('hb_shortlist', []) || [];
+    return saved.filter(id => !id.startsWith('hb-'));
   });
 
   // Compare List Properties IDs (up to 3)
@@ -708,7 +711,34 @@ export default function App() {
           {/* Property Cards Grid / List */}
           <div className="lg:col-span-3 space-y-6">
             
-            {filteredProperties.length === 0 ? (
+            {properties.length === 0 ? (
+              <div id="empty-portal-no-properties" className="bg-white rounded-3xl border border-slate-200 p-10 sm:p-14 text-center space-y-4 shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200/80">
+                  <Home className="w-8 h-8 text-amber-600" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black text-slate-900">
+                    {lang === 'hi' ? 'कोई प्रॉपर्टी लिस्टिंग उपलब्ध नहीं है' : 'No Property Listings Available'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                    {lang === 'hi'
+                      ? 'सभी डेमो प्रॉपर्टीज हटा दी गई हैं। आप अपनी प्रॉपर्टी (मकान, फ्लैट, प्लॉट, कृषि भूमि या दुकान) यहाँ सबसे पहले लिस्ट कर सकते हैं।'
+                      : 'All demo property listings have been removed. Be the first to post your property (House, Flat, Plot, Farmland, or Commercial Space) on 100 BUILDERS REALITIES.'}
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    id="post-first-property-btn"
+                    type="button"
+                    onClick={() => handleTriggerPostProperty('owner')}
+                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white text-xs sm:text-sm font-black px-6 py-3 rounded-xl transition cursor-pointer shadow-md hover:shadow-lg active:scale-95"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>{lang === 'hi' ? 'अपनी प्रॉपर्टी लिस्ट करें' : 'Post Your Property'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : filteredProperties.length === 0 ? (
               <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
                 <Search className="w-12 h-12 text-slate-300 mx-auto" />
                 <h3 className="text-lg font-bold text-slate-900">{t.noPropertiesFound}</h3>
