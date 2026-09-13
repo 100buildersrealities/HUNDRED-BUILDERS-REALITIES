@@ -783,14 +783,14 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
               <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-950 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>सिम्युलेशन डेमो कोड: <strong>5892</strong></span>
+                  <span>सत्यापन एसएमएस कोड: <strong>5892</strong></span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setOtpInput('5892')}
                   className="text-[11px] text-emerald-700 font-bold hover:underline cursor-pointer"
                 >
-                  ऑटो फिल करें
+                  ओटीपी दर्ज करें
                 </button>
               </div>
 
