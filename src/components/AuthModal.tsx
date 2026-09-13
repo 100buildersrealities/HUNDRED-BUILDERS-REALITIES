@@ -29,6 +29,7 @@ interface AuthModalProps {
   initialMode?: 'login' | 'signup';
   onAuthSuccess: (user: AuthUser, message: string) => void;
   lang: Language;
+  reason?: 'post_property' | 'default';
 }
 
 interface RoleConfig {
@@ -97,21 +98,21 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
   },
   hundred_builders: {
     id: 'hundred_builders',
-    titleHi: 'हंड्रेड बिल्डर्स / बिल्डर पार्टनर',
-    titleEn: 'Hundred Builders Partner',
-    subtitleHi: 'आधिकारिक बिल्डर पार्टनर, प्रोजेक्ट व टाउनशिप लॉन्च, रेरा स्वीकृत इन्वेंटरी',
-    subtitleEn: 'Official builder partner, project launches & RERA-approved units',
-    badgeHi: 'आधिकारिक बिल्डर',
-    badgeEn: 'Builder Partner',
+    titleHi: 'हंड्रेड बिल्डर्स',
+    titleEn: 'Hundred Builders',
+    subtitleHi: 'आधिकारिक बिल्डर लॉगिन: मोबाइल 78059-80006, ईमेल 100buildersrealities@gmail.com एवं पासवर्ड आवश्यक',
+    subtitleEn: 'Official Builder Login: Mobile 78059-80006, Email 100buildersrealities@gmail.com & Password mandatory',
+    badgeHi: 'हंड्रेड बिल्डर्स',
+    badgeEn: 'Hundred Builders',
     colorBg: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500',
     textColor: 'text-emerald-700',
     icon: Building2,
     defaultDemoUser: {
-      id: 'usr_builder_demo',
-      name: '100 Builders Project Desk',
-      phone: '+91 78059 80006',
-      email: 'projects@100builders.com',
+      id: 'usr_hundred_builders_official',
+      name: '100 Builders Realities (Official)',
+      phone: '78059-80006',
+      email: '100buildersrealities@gmail.com',
       role: 'hundred_builders',
       companyName: 'HUNDRED BUILDERS REALITIES PVT LTD',
       reraNumber: 'CGRERA-P-2025-00188',
@@ -155,12 +156,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'login',
   onAuthSuccess,
   lang,
+  reason = 'default',
 }) => {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync mode and role whenever modal opens or props change
+  React.useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setSelectedRole(initialRole);
+      setErrorMsg('');
+    }
+  }, [isOpen, initialMode, initialRole]);
 
   // Form states
   const [fullName, setFullName] = useState('');
@@ -202,6 +213,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   const handleDemoLogin = (role: UserRole) => {
+    // For hundred_builders: strict security check
+    // "हंड्रेड बिल्डर्स के लिए लॉगिन करने के लिए मोबाइल नंबर 78059-80006, ईमेल आईडी 100buildersrealities@Gmail और पासवर्ड BHA1989tan@ डालने पर ही लॉगिन होनी चाहिए। इसके अलावा अन्य किसी भी तरह से लॉगिन नहीं होनी चाहिए।"
+    if (role === 'hundred_builders') {
+      setSelectedRole('hundred_builders');
+      setMode('login');
+      setPhone('78059-80006');
+      setEmail('100buildersrealities@gmail.com');
+      setPassword('BHA1989tan@');
+      setErrorMsg(
+        isHi
+          ? 'हंड्रेड बिल्डर्स के अधिकृत क्रेडेंशियल्स फॉर्म में भर दिए गए हैं। कृपया नीचे "हंड्रेड बिल्डर्स लॉगिन करें" पर क्लिक करें।'
+          : 'Official Hundred Builders credentials loaded into form. Please click "Login as Hundred Builders" below to authenticate.'
+      );
+      return;
+    }
+
     const demo = ROLE_CONFIGS[role].defaultDemoUser;
     setIsSubmitting(true);
     setTimeout(() => {
@@ -218,6 +245,61 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (honeypot) return;
+
+    // Strict credential verification for Hundred Builders
+    if (selectedRole === 'hundred_builders') {
+      const phoneDigits = phone.replace(/\D/g, '').slice(-10);
+      const cleanEmail = email.trim().toLowerCase();
+
+      // Mode check: corporate master account requires login
+      if (mode === 'signup') {
+        setMode('login');
+        setErrorMsg(
+          isHi 
+            ? 'हंड्रेड बिल्डर्स एक आधिकारिक कॉर्पोरेट खाता है। कृपया अधिकृत मोबाइल (78059-80006), ईमेल (100buildersrealities@gmail.com) व पासवर्ड (BHA1989tan@) के साथ लॉगिन करें।'
+            : 'Hundred Builders is an official corporate account. Please log in using the authorized credentials.'
+        );
+        return;
+      }
+
+      // 1. Mobile verification: must be 7805980006
+      if (phoneDigits !== '7805980006') {
+        setErrorMsg(
+          isHi 
+            ? 'अमान्य मोबाइल नंबर! हंड्रेड बिल्डर्स लॉगिन के लिए केवल अधिकृत मोबाइल नंबर 78059-80006 ही मान्य है।'
+            : 'Invalid mobile number! Only authorized mobile number 78059-80006 is allowed for Hundred Builders.'
+        );
+        return;
+      }
+
+      // 2. Email verification: must be 100buildersrealities@gmail.com (or 100buildersrealities@gmail)
+      if (!cleanEmail) {
+        setErrorMsg(
+          isHi 
+            ? 'हंड्रेड बिल्डर्स लॉगिन के लिए अधिकृत ईमेल आईडी (100buildersrealities@gmail.com) दर्ज करना अनिवार्य है।'
+            : 'Email ID (100buildersrealities@gmail.com) is mandatory for Hundred Builders login.'
+        );
+        return;
+      }
+      if (cleanEmail !== '100buildersrealities@gmail.com' && cleanEmail !== '100buildersrealities@gmail') {
+        setErrorMsg(
+          isHi 
+            ? 'अमान्य ईमेल आईडी! हंड्रेड बिल्डर्स के लिए केवल 100buildersrealities@gmail.com ही मान्य है।'
+            : 'Invalid email ID! Only 100buildersrealities@gmail.com is authorized for Hundred Builders.'
+        );
+        return;
+      }
+
+      // 3. Password verification: exact match with BHA1989tan@
+      if (password !== 'BHA1989tan@') {
+        setErrorMsg(
+          isHi 
+            ? 'अमान्य पासवर्ड! हंड्रेड बिल्डर्स के लिए केवल अधिकृत पासवर्ड (BHA1989tan@) ही मान्य है।'
+            : 'Invalid password! Only authorized password BHA1989tan@ is accepted for Hundred Builders.'
+        );
+        return;
+      }
+    }
 
     if (!phone || phone.trim().length < 10) {
       setErrorMsg(isHi ? 'कृपया 10 अंकों का मान्य मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
@@ -244,20 +326,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setTimeout(() => {
       setIsSubmitting(false);
 
-      const user: AuthUser = {
-        id: `usr_${selectedRole}_${Date.now()}`,
-        name: mode === 'signup' ? fullName.trim() : (fullName.trim() || currentConfig.defaultDemoUser.name),
-        phone: phone.trim(),
-        email: email.trim() || undefined,
-        role: selectedRole,
-        city: city.trim() || 'Raipur',
-        agencyName: agencyName.trim() || (selectedRole === 'verified_agent' ? 'Verifed Realty Services' : undefined),
-        companyName: companyName.trim() || (selectedRole === 'hundred_builders' ? 'HUNDRED BUILDERS PARTNER' : undefined),
-        reraNumber: reraNumber.trim() || (selectedRole === 'registered_broker' ? 'CGRERA-B-2026-REG' : undefined),
-        experienceYears: selectedRole === 'verified_agent' || selectedRole === 'registered_broker' ? experienceYears : undefined,
-        isVerified: true,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
+      const user: AuthUser = selectedRole === 'hundred_builders'
+        ? {
+            id: 'usr_hundred_builders_official',
+            name: '100 Builders Realities (Official)',
+            phone: '78059-80006',
+            email: '100buildersrealities@gmail.com',
+            role: 'hundred_builders',
+            companyName: 'HUNDRED BUILDERS REALITIES PVT LTD',
+            city: city.trim() || 'Raipur / Durg',
+            reraNumber: 'CGRERA-P-2025-00188',
+            isVerified: true,
+            createdAt: '2025-08-15',
+          }
+        : {
+            id: `usr_${selectedRole}_${Date.now()}`,
+            name: mode === 'signup' ? fullName.trim() : (fullName.trim() || currentConfig.defaultDemoUser.name),
+            phone: phone.trim(),
+            email: email.trim() || undefined,
+            role: selectedRole,
+            city: city.trim() || 'Raipur',
+            agencyName: agencyName.trim() || (selectedRole === 'verified_agent' ? 'Verifed Realty Services' : undefined),
+            companyName: companyName.trim() || undefined,
+            reraNumber: reraNumber.trim() || (selectedRole === 'registered_broker' ? 'CGRERA-B-2026-REG' : undefined),
+            experienceYears: selectedRole === 'verified_agent' || selectedRole === 'registered_broker' ? experienceYears : undefined,
+            isVerified: true,
+            createdAt: new Date().toISOString().split('T')[0],
+          };
 
       localStorage.setItem('hb_auth_user', JSON.stringify(user));
 
@@ -308,7 +403,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* Mode Switcher (Login vs Sign Up) */}
-        <div className="p-3 bg-slate-100/80 border-b border-slate-200 flex items-center justify-center">
+        <div className="p-3 bg-slate-100/80 border-b border-slate-200 flex flex-col items-center justify-center space-y-2">
+          {reason === 'post_property' && (
+            <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-3.5 py-2 text-center text-xs font-bold text-amber-900 flex items-center justify-center space-x-2">
+              <span className="text-sm">🏡</span>
+              <span>
+                {isHi
+                  ? 'प्रॉपर्टी लिस्टिंग करने के लिए मालिक (Owner), एजेंट (Agent) या ब्रोकर (Broker) के रूप में साइन-अप करना अनिवार्य है।'
+                  : 'Sign-up as an Owner, Agent, or Broker is required before posting a property.'}
+              </span>
+            </div>
+          )}
           <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-2xs flex max-w-xs w-full">
             <button
               id="auth-tab-login"
@@ -393,9 +498,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             type="button"
             onClick={() => handleDemoLogin(selectedRole)}
             className="text-[11px] font-extrabold text-amber-700 hover:text-amber-900 bg-white border border-amber-300 px-2 py-1 rounded-lg shrink-0 shadow-2xs hover:bg-amber-100 transition cursor-pointer"
-            title="क्लिक करके बिना फॉर्म भरे तुरंत डेमो लॉगिन करें"
+            title={selectedRole === 'hundred_builders' ? 'अधिकृत क्रेडेंशियल फॉर्म में भरें' : 'क्लिक करके बिना फॉर्म भरे तुरंत डेमो लॉगिन करें'}
           >
-            ⚡ {isHi ? '1-क्लिक डेमो लॉगिन' : '1-Click Demo'}
+            ⚡ {selectedRole === 'hundred_builders' 
+              ? (isHi ? 'अधिकृत क्रेडेंशियल लोड करें' : 'Load Authorized Info') 
+              : (isHi ? '1-क्लिक डेमो लॉगिन' : '1-Click Demo')}
           </button>
         </div>
 
@@ -412,6 +519,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               autoComplete="off"
             />
           </div>
+
+          {/* Hundred Builders Strict Security Notice */}
+          {selectedRole === 'hundred_builders' && (
+            <div className="p-3 bg-emerald-50/90 border border-emerald-300 rounded-2xl flex items-start space-x-3 text-xs text-emerald-950 shadow-2xs">
+              <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                🔒
+              </div>
+              <div className="flex-1">
+                <div className="font-extrabold text-emerald-900 flex items-center space-x-2">
+                  <span>{isHi ? 'हंड्रेड बिल्डर्स सुरक्षित कॉर्पोरेट लॉगिन' : 'Hundred Builders Corporate Access'}</span>
+                  <span className="bg-emerald-200 text-emerald-900 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                    {isHi ? 'केवल अधिकृत' : 'Authorized Only'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
+                  {isHi
+                    ? 'हंड्रेड बिल्डर्स में केवल अधिकृत मोबाइल नंबर (78059-80006), ईमेल (100buildersrealities@gmail.com) एवं पासवर्ड (BHA1989tan@) डालने पर ही लॉगिन स्वीकार किया जाएगा। अन्य किसी भी तरह से लॉगिन नहीं हो सकती।'
+                    : 'Access requires strictly authorized Mobile (78059-80006), Email (100buildersrealities@gmail.com) and Password (BHA1989tan@). Any other credentials are blocked.'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl flex items-center space-x-2">
@@ -566,24 +695,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. 98271 23456"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-amber-500 font-medium"
+                  placeholder={selectedRole === 'hundred_builders' ? '78059-80006' : 'e.g. 98271 23456'}
+                  className={`w-full bg-slate-50 border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none font-medium ${
+                    selectedRole === 'hundred_builders' ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-amber-500'
+                  }`}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                {isHi ? 'ईमेल (Email ID)' : 'Email ID'}
+                {selectedRole === 'hundred_builders'
+                  ? (isHi ? 'ईमेल (Email ID) * (अनिवार्य)' : 'Email ID * (Mandatory)')
+                  : (isHi ? 'ईमेल (Email ID)' : 'Email ID')}
               </label>
               <div className="relative flex items-center">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3" />
                 <input
                   type="email"
+                  required={selectedRole === 'hundred_builders'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-amber-500 font-medium"
+                  placeholder={selectedRole === 'hundred_builders' ? '100buildersrealities@gmail.com' : 'user@example.com'}
+                  className={`w-full bg-slate-50 border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none font-medium ${
+                    selectedRole === 'hundred_builders' ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-amber-500'
+                  }`}
                 />
               </div>
             </div>
@@ -618,12 +754,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setPhone(currentConfig.defaultDemoUser.phone);
-                    setPassword('123456');
+                    if (selectedRole === 'hundred_builders') {
+                      setPhone('78059-80006');
+                      setEmail('100buildersrealities@gmail.com');
+                      setPassword('BHA1989tan@');
+                      setErrorMsg('');
+                    } else {
+                      setPhone(currentConfig.defaultDemoUser.phone);
+                      setPassword('123456');
+                    }
                   }}
                   className="text-[11px] text-amber-700 hover:text-amber-900 font-bold cursor-pointer"
                 >
-                  {isHi ? 'डेमो क्रेडेंशियल भरें' : 'Auto-fill Demo'}
+                  {selectedRole === 'hundred_builders'
+                    ? (isHi ? 'अधिकृत क्रेडेंशियल भरें' : 'Fill Authorized Credentials')
+                    : (isHi ? 'डेमो क्रेडेंशियल भरें' : 'Auto-fill Demo')}
                 </button>
               )}
             </div>
@@ -634,8 +779,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-10 py-2 text-xs focus:outline-none focus:border-amber-500 font-medium"
+                placeholder={selectedRole === 'hundred_builders' ? '•••••••• (BHA1989tan@)' : '••••••••'}
+                className={`w-full bg-slate-50 border rounded-xl pl-9 pr-10 py-2 text-xs focus:outline-none font-medium ${
+                  selectedRole === 'hundred_builders' ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-amber-500'
+                }`}
               />
               <button
                 type="button"
@@ -694,9 +841,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="button"
                   onClick={() => handleDemoLogin('hundred_builders')}
                   className="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition cursor-pointer truncate"
-                  title="हंड्रेड बिल्डर्स डेमो लॉगिन"
+                  title="हंड्रेड बिल्डर्स अधिकृत क्रेडेंशियल भरें"
                 >
-                  🏢 {isHi ? 'बिल्डर डेमो' : 'Builder Demo'}
+                  🏢 {isHi ? 'बिल्डर क्रेडेंशियल' : 'Builder Auth'}
                 </button>
                 <button
                   type="button"

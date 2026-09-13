@@ -62,11 +62,28 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<UserRole>('owner');
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+  const [authModalReason, setAuthModalReason] = useState<'default' | 'post_property'>('default');
 
-  const handleOpenAuth = (role: UserRole = 'owner', mode: 'login' | 'signup' = 'login') => {
+  const handleOpenAuth = (
+    role: UserRole = 'owner', 
+    mode: 'login' | 'signup' = 'login',
+    reason: 'default' | 'post_property' = 'default'
+  ) => {
     setAuthModalRole(role);
     setAuthModalMode(mode);
+    setAuthModalReason(reason);
     setIsAuthModalOpen(true);
+  };
+
+  // Rule: Property Owner, Verified Agent, Registered Broker must all sign up before posting a property
+  const handleTriggerPostProperty = (preferredRole?: UserRole) => {
+    if (authUser) {
+      setEditingProperty(null);
+      setIsPostPropertyOpen(true);
+    } else {
+      const targetRole = preferredRole || 'owner';
+      handleOpenAuth(targetRole, 'signup', 'post_property');
+    }
   };
 
   const handleAuthSuccess = (user: AuthUser) => {
@@ -81,6 +98,12 @@ export default function App() {
         ? `स्वागत है, ${user.name}! आप ${roleNameHi} के रूप में सफलतापूर्वक लॉगिन हो चुके हैं।`
         : `Welcome, ${user.name}! Successfully logged in as ${user.role}.`
     );
+
+    // If the authentication was triggered specifically to post a property, open post property form immediately
+    if (authModalReason === 'post_property') {
+      setIsPostPropertyOpen(true);
+      setAuthModalReason('default');
+    }
   };
 
   const handleLogout = () => {
@@ -89,14 +112,16 @@ export default function App() {
     setToastMessage(lang === 'hi' ? 'आप सफलतापूर्वक लॉगआउट हो चुके हैं।' : 'You have been logged out.');
   };
 
-  // Properties State (loads user-added listings from localStorage)
   // Properties State (loads user-added listings with tamper-evident secure storage)
   const [properties, setProperties] = useState<Property[]>(() => {
     try {
+      const deletedIds = secureRetrieve<string[]>('hb_deleted_property_ids', []) || [];
       const saved = secureRetrieve<Property[] | null>('hb_realities_properties', null);
+      let list: Property[] = initialProperties;
       if (saved && Array.isArray(saved)) {
-        return [...saved, ...initialProperties.filter(ip => !saved.some((p: Property) => p.id === ip.id))];
+        list = [...saved, ...initialProperties.filter(ip => !saved.some((p: Property) => p.id === ip.id))];
       }
+      return list.filter(p => !deletedIds.includes(p.id));
     } catch (e) {
       console.error(e);
     }
@@ -176,9 +201,25 @@ export default function App() {
     setProperties(prev => prev.filter(p => p.id !== propertyId));
     setShortlistIds(prev => prev.filter(id => id !== propertyId));
     setCompareIds(prev => prev.filter(id => id !== propertyId));
+    
+    // Persist deleted property ID so it is never re-added from mock/storage
+    try {
+      const existingDeleted = secureRetrieve<string[]>('hb_deleted_property_ids', []) || [];
+      const updatedDeleted = Array.from(new Set([...existingDeleted, propertyId]));
+      secureStore('hb_deleted_property_ids', updatedDeleted);
+    } catch (e) {
+      console.error(e);
+    }
+
     if (selectedProperty?.id === propertyId) {
       setSelectedProperty(null);
     }
+
+    if (editingProperty?.id === propertyId) {
+      setEditingProperty(null);
+      setIsPostPropertyOpen(false);
+    }
+
     setDeletingProperty(null);
 
     const propName = targetProp 
@@ -459,7 +500,7 @@ export default function App() {
         onSelectLanguage={handleSelectLanguage}
         selectedCity={filters.city}
         onSelectCity={handleSelectCity}
-        onOpenPostProperty={() => setIsPostPropertyOpen(true)}
+        onOpenPostProperty={() => handleTriggerPostProperty('owner')}
         onOpenCareerCare={() => setIsCareerCareOpen(true)}
         onOpenEmiCalc={() => setIsEmiCalcOpen(true)}
         onOpenValuation={() => setIsValuationOpen(true)}
@@ -509,7 +550,7 @@ export default function App() {
       <RolePortalsBanner
         authUser={authUser}
         onOpenAuth={handleOpenAuth}
-        onOpenPostProperty={() => setIsPostPropertyOpen(true)}
+        onOpenPostProperty={() => handleTriggerPostProperty(authUser?.role || 'owner')}
         onOpenMyListings={() => setIsMyListingsOpen(true)}
         myListingsCount={myListingsCount}
         onLogout={handleLogout}
@@ -818,7 +859,7 @@ export default function App() {
         onOpenPostProperty={() => {
           setIsMyListingsOpen(false);
           setEditingProperty(null);
-          setIsPostPropertyOpen(true);
+          handleTriggerPostProperty(authUser?.role || 'owner');
         }}
         lang={lang}
       />
@@ -836,17 +877,25 @@ export default function App() {
         onClose={handleClosePostProperty}
         onAddProperty={handleAddProperty}
         onUpdateProperty={handleUpdateProperty}
+        onDeleteProperty={handleRequestDeleteProperty}
         propertyToEdit={editingProperty}
         lang={lang}
         authUser={authUser}
+        onOpenAuth={(role, mode) => {
+          handleOpenAuth(role || 'owner', mode || 'signup', 'post_property');
+        }}
       />
 
       {/* Role-Based Login & Signup Modal (Owner, Agent, Hundred Builders, Registered Broker) */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setAuthModalReason('default');
+        }}
         initialRole={authModalRole}
         initialMode={authModalMode}
+        reason={authModalReason}
         onAuthSuccess={handleAuthSuccess}
         lang={lang}
       />
@@ -863,7 +912,7 @@ export default function App() {
         lang={lang}
         onOpenPostProperty={() => {
           setIsValuationOpen(false);
-          setIsPostPropertyOpen(true);
+          handleTriggerPostProperty('owner');
         }}
       />
 
@@ -914,7 +963,7 @@ export default function App() {
         lang={lang}
         onSelectCity={handleSelectCity}
         onSelectTab={handleSelectTab}
-        onOpenPostProperty={() => setIsPostPropertyOpen(true)}
+        onOpenPostProperty={() => handleTriggerPostProperty('owner')}
         onOpenCareerCare={() => setIsCareerCareOpen(true)}
         onOpenEmiCalc={() => setIsEmiCalcOpen(true)}
         onOpenValuation={() => setIsValuationOpen(true)}

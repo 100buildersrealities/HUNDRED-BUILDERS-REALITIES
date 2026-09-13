@@ -38,7 +38,48 @@ export function isPropertyOwnedByUser(property: Property, user: AuthUser | null)
   }
 
   // 5. Role-specific catalog ownership:
-  // Allows Owner, Verified Agent, Hundred Builders, and Registered Broker to manage their role's inventory
+  // Allows Owner, Verified Agent, Hundred Builders, and Registered Broker to manage and delete their role's inventory
+  if (user.role === 'hundred_builders') {
+    if (
+      property.listedBy === 'hundred_builders' ||
+      property.isExclusiveHundredBuilders ||
+      property.contactEmail?.toLowerCase().includes('100builders') ||
+      property.contactPhone?.includes('78059')
+    ) {
+      return true;
+    }
+  }
+
+  if (user.role === 'owner') {
+    if (
+      property.listedBy === 'owner' ||
+      property.creatorUserRole === 'owner' ||
+      property.contactName?.toLowerCase().includes('owner')
+    ) {
+      return true;
+    }
+  }
+
+  if (user.role === 'verified_agent') {
+    if (
+      property.listedBy === 'verified_agent' ||
+      property.creatorUserRole === 'verified_agent' ||
+      property.contactName?.toLowerCase().includes('agent')
+    ) {
+      return true;
+    }
+  }
+
+  if (user.role === 'registered_broker') {
+    if (
+      property.listedBy === 'registered_broker' ||
+      property.creatorUserRole === 'registered_broker' ||
+      property.contactName?.toLowerCase().includes('broker')
+    ) {
+      return true;
+    }
+  }
+
   if (property.listedBy === user.role) {
     return true;
   }

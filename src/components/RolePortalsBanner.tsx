@@ -86,11 +86,11 @@ export const RolePortalsBanner: React.FC<RolePortalsBannerProps> = ({
     {
       role: 'hundred_builders',
       titleHi: 'हंड्रेड बिल्डर्स',
-      titleEn: 'Hundred Builders Partner',
-      subtitleHi: 'आधिकारिक बिल्डर पार्टनर, नए प्रोजेक्ट व टाउनशिप लॉन्च, रेरा स्वीकृत इन्वेंटरी डिस्प्ले',
-      subtitleEn: 'Official developer portal, project launches, township showcases & RERA units',
+      titleEn: 'Hundred Builders',
+      subtitleHi: 'आधिकारिक बिल्डर पोर्टल: मोबाइल 78059-80006, 100buildersrealities@gmail.com व पासवर्ड द्वारा अधिकृत लॉगिन',
+      subtitleEn: 'Official Developer portal: authorized access via 78059-80006 & 100buildersrealities@gmail.com',
       tagHi: 'आधिकारिक बिल्डर',
-      tagEn: 'Builder Partner',
+      tagEn: 'Official Builder',
       icon: Building2,
       accentBg: 'bg-emerald-500/10',
       accentBorder: 'border-emerald-200 hover:border-emerald-400',
@@ -182,7 +182,7 @@ export const RolePortalsBanner: React.FC<RolePortalsBannerProps> = ({
         /* The 4 Distinct Role Cards with Login & Signup Buttons */
         <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs">
           {/* Section Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
             <div>
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-amber-600"></span>
@@ -203,10 +203,23 @@ export const RolePortalsBanner: React.FC<RolePortalsBannerProps> = ({
             </div>
           </div>
 
+          {/* Policy Notice: Sign-Up required before listing */}
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200/90 rounded-2xl flex items-center space-x-2.5 text-xs text-amber-950">
+            <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              ✓
+            </span>
+            <p className="font-semibold text-[11px] sm:text-xs leading-relaxed text-amber-900">
+              {isHi
+                ? 'नियम: प्रॉपर्टी लिस्टिंग करने वाले मालिक (Owner), वेरिफाइड एजेंट (Verified Agent), रजिस्टर्ड ब्रोकर (Registered Broker) सभी को साइनअप करने के बाद ही प्रॉपर्टी की लिस्टिंग करने की अनुमति है।'
+                : 'Policy: Property Owners, Verified Agents, and Registered Brokers must sign up before listing properties on the platform.'}
+            </p>
+          </div>
+
           {/* 4 Responsive Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             {roleCards.map((card) => {
               const Icon = card.icon;
+              const defaultMode: 'login' | 'signup' = card.role === 'hundred_builders' ? 'login' : 'signup';
               return (
                 <div
                   key={card.role}
@@ -233,27 +246,29 @@ export const RolePortalsBanner: React.FC<RolePortalsBannerProps> = ({
                     </p>
                   </div>
 
-                  {/* Login & Signup Buttons */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
-                    <button
-                      id={`btn-login-${card.role}`}
-                      type="button"
-                      onClick={() => onOpenAuth(card.role, 'login')}
-                      className={`w-full py-2 px-2 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center space-x-1 active:scale-98 ${card.loginBtnBg}`}
-                    >
-                      <LogIn className="w-3.5 h-3.5" />
-                      <span>{isHi ? 'लॉगिन' : 'Login'}</span>
-                    </button>
-
-                    <button
-                      id={`btn-signup-${card.role}`}
-                      type="button"
-                      onClick={() => onOpenAuth(card.role, 'signup')}
-                      className={`w-full py-2 px-2 rounded-xl text-xs font-black shadow-xs transition cursor-pointer flex items-center justify-center space-x-1 active:scale-98 ${card.signupBtnBg}`}
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>{isHi ? 'साइन-अप' : 'Sign Up'}</span>
-                    </button>
+                  {/* Login & Sign Up Option (Opens role-appropriate auth mode) */}
+                  <div 
+                    id={`portal-auth-option-${card.role}`}
+                    onClick={() => onOpenAuth(card.role, defaultMode)}
+                    className="pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-xs font-bold text-slate-700 hover:text-amber-800 transition cursor-pointer group/link select-none py-1"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onOpenAuth(card.role, defaultMode);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <LogIn className="w-3.5 h-3.5 text-amber-600 group-hover/link:scale-110 transition-transform" />
+                      <span className="font-extrabold text-slate-800 group-hover/link:text-amber-800">
+                        {card.role === 'hundred_builders' 
+                          ? (isHi ? 'अधिकृत लॉगिन विकल्प' : 'Authorized Login')
+                          : (isHi ? 'साइन-अप एवं लॉगिन विकल्प' : 'Sign Up & Login')}
+                      </span>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover/link:text-amber-600 group-hover/link:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
               );

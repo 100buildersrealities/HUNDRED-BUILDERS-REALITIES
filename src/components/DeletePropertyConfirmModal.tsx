@@ -25,7 +25,7 @@ export const DeletePropertyConfirmModal: React.FC<DeletePropertyConfirmModalProp
   return (
     <div 
       id="delete-property-modal" 
-      className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
     >
       <div 
         className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-rose-200 overflow-hidden relative animate-in zoom-in-95 duration-150"

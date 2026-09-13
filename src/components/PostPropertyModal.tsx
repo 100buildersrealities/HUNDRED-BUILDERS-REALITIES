@@ -18,9 +18,12 @@ import {
   Tractor,
   Ruler,
   Pencil,
-  Trash2
+  Trash2,
+  ShieldCheck,
+  Award,
+  Building2
 } from 'lucide-react';
-import { Property, PurposeType, PropertyCategory, FurnishingStatus, PossessionStatus, FacingDirection, AgriculturalLandDetails, ResidentialPlotDetails, ListedByType, AuthUser } from '../types';
+import { Property, PurposeType, PropertyCategory, FurnishingStatus, PossessionStatus, FacingDirection, AgriculturalLandDetails, ResidentialPlotDetails, ListedByType, AuthUser, UserRole } from '../types';
 import { AgriculturalLandAreaForm } from './AgriculturalLandAreaForm';
 import { ResidentialPlotAreaForm } from './ResidentialPlotAreaForm';
 import { Language, translations, amenitiesList } from '../data/translations';
@@ -41,6 +44,8 @@ interface PostPropertyModalProps {
   authUser?: AuthUser | null;
   propertyToEdit?: Property | null;
   onUpdateProperty?: (updatedProp: Property) => void;
+  onDeleteProperty?: (property: Property) => void;
+  onOpenAuth?: (role?: UserRole, mode?: 'login' | 'signup') => void;
 }
 
 export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
@@ -51,6 +56,8 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   authUser,
   propertyToEdit,
   onUpdateProperty,
+  onDeleteProperty,
+  onOpenAuth,
 }) => {
   if (!isOpen) return null;
 
@@ -338,6 +345,17 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Security Guard 0: Mandatory Authentication Check
+    // Per policy: Property Owners, Verified Agents, and Registered Brokers can post properties only after signing up
+    if (!authUser) {
+      setFormError(
+        lang === 'hi'
+          ? 'प्रॉपर्टी लिस्टिंग करने वाले मालिक (Owner), वेरिफाइड एजेंट (Verified Agent), रजिस्टर्ड ब्रोकर (Registered Broker) सभी को साइनअप करने के बाद ही प्रॉपर्टी की लिस्टिंग करने की अनुमति है।'
+          : 'Property Owners, Verified Agents, and Registered Brokers must sign up before listing properties.'
+      );
+      return;
+    }
+
     // Security Guard 1: Anti-Bot Trap
     if (isHoneypotTriggered(honeypot)) {
       console.warn('[Security Guard] Bot rejected');
@@ -538,6 +556,209 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     onAddProperty(newProp);
   };
 
+  // GATEKEEPER: If user is not authenticated and not editing, show the Sign-Up Required portal view
+  if (!authUser && !isEditing) {
+    return (
+      <div id="post-property-auth-gate-modal" className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+        <div 
+          className="bg-white rounded-3xl max-w-2xl w-full flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-900 text-white">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-amber-400/80 shadow-xs shrink-0 bg-slate-950 flex items-center justify-center">
+                <img 
+                  src="/logo.png" 
+                  alt="100 Builders Realities Seal" 
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer" 
+                />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-extrabold text-white">
+                  {isHi ? 'प्रॉपर्टी लिस्टिंग पोर्टल • साइन-अप अनिवार्य' : 'Post Property Portal • Sign-Up Required'}
+                </h2>
+                <p className="text-xs text-amber-300/90 font-medium">
+                  {isHi ? 'मालिक, एजेंट व ब्रोकर साइन-अप के बाद ही प्रॉपर्टी लिस्ट कर सकते हैं' : 'Owners, Agents & Brokers must sign up before listing properties'}
+                </p>
+              </div>
+            </div>
+            <button
+              id="auth-gate-close-btn"
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-5 max-h-[82vh] overflow-y-auto">
+            <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-4 flex items-start space-x-3">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-800 shrink-0 mt-0.5">
+                <ShieldCheck className="w-6 h-6 text-amber-700" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-slate-900">
+                  {isHi ? 'प्रॉपर्टी लिस्टिंग सुरक्षा एवं सत्यापन नियम' : 'Property Security & Verification Policy'}
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isHi 
+                    ? '100 BUILDERS REALITIES पर खरीदारों और विक्रेताओं के विश्वास एवं सुरक्षा के लिए प्रॉपर्टी लिस्टिंग करने वाले मालिक (Owner), वेरिफाइड एजेंट (Verified Agent), रजिस्टर्ड ब्रोकर (Registered Broker) सभी को साइनअप करने के बाद ही प्रॉपर्टी की लिस्टिंग करने की अनुमति है। कृपया अपनी श्रेणी चुनकर साइन-अप करें:'
+                    : 'To maintain listing authenticity and buyer trust, Property Owners, Verified Agents, and Registered Brokers must sign up before listing properties. Please select your category to proceed:'}
+                </p>
+              </div>
+            </div>
+
+            {/* 3 Dedicated Sign-Up Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {/* 1. Property Owner */}
+              <div className="bg-gradient-to-b from-amber-50/60 to-amber-100/30 rounded-2xl border-2 border-amber-300/90 p-4 flex flex-col justify-between hover:shadow-md transition">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center">
+                    <Home className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] bg-amber-200 text-amber-900 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                      0% ब्रोकरेज
+                    </span>
+                    <h4 className="text-sm font-black text-slate-900 mt-1.5">
+                      {isHi ? 'प्रॉपर्टी मालिक' : 'Property Owner'}
+                    </h4>
+                    <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                      {isHi ? 'व्यक्तिगत मकान, फ्लैट, कृषि भूमि या प्लॉट सीधे लिस्ट करें व खरीदारों से सीधा संपर्क पाएं।' : 'List your home, flat, farmland or plot directly with zero brokerage.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  id="gate-signup-owner-btn"
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAuth?.('owner', 'signup');
+                  }}
+                  className="mt-4 w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white text-xs font-black py-2.5 rounded-xl transition cursor-pointer shadow-sm active:scale-95 text-center"
+                >
+                  {isHi ? 'मालिक साइन-अप करें' : 'Sign Up as Owner'}
+                </button>
+              </div>
+
+              {/* 2. Verified Agent */}
+              <div className="bg-gradient-to-b from-blue-50/60 to-blue-100/30 rounded-2xl border-2 border-blue-300/90 p-4 flex flex-col justify-between hover:shadow-md transition">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-700 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] bg-blue-200 text-blue-900 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                      वेरिफाइड बैज
+                    </span>
+                    <h4 className="text-sm font-black text-slate-900 mt-1.5">
+                      {isHi ? 'वेरिफाइड एजेंट' : 'Verified Agent'}
+                    </h4>
+                    <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                      {isHi ? 'सत्यापित एजेंट प्रोफाइल, मल्टीपल क्लाइंट लिस्टिंग्स व सक्रिय बायर लीड्स प्राप्त करें।' : 'Verified agent badge, client property listings & direct buyer lead access.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  id="gate-signup-agent-btn"
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAuth?.('verified_agent', 'signup');
+                  }}
+                  className="mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-xs font-black py-2.5 rounded-xl transition cursor-pointer shadow-sm active:scale-95 text-center"
+                >
+                  {isHi ? 'एजेंट साइन-अप करें' : 'Sign Up as Agent'}
+                </button>
+              </div>
+
+              {/* 3. Registered Broker */}
+              <div className="bg-gradient-to-b from-purple-50/60 to-purple-100/30 rounded-2xl border-2 border-purple-300/90 p-4 flex flex-col justify-between hover:shadow-md transition">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-700 flex items-center justify-center">
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] bg-purple-200 text-purple-900 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                      RERA अधिकृत
+                    </span>
+                    <h4 className="text-sm font-black text-slate-900 mt-1.5">
+                      {isHi ? 'रजिस्टर्ड ब्रोकर' : 'Registered Broker'}
+                    </h4>
+                    <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                      {isHi ? 'RERA प्रमाणित ब्रोकर नेटवर्क, करियर केयर पार्टनर व सुरक्षित को-ब्रोकिंग इंसेंटिव।' : 'RERA broker network, Career Care partner program & co-broking incentives.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  id="gate-signup-broker-btn"
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAuth?.('registered_broker', 'signup');
+                  }}
+                  className="mt-4 w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white text-xs font-black py-2.5 rounded-xl transition cursor-pointer shadow-sm active:scale-95 text-center"
+                >
+                  {isHi ? 'ब्रोकर साइन-अप करें' : 'Sign Up as Broker'}
+                </button>
+              </div>
+            </div>
+
+            {/* Hundred Builders Partner Note */}
+            <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-800 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs text-emerald-950 font-black block">
+                    {isHi ? 'हंड्रेड बिल्डर्स अधिकृत पार्टनर?' : 'Hundred Builders Official Partner?'}
+                  </span>
+                  <span className="text-[11px] text-emerald-800 font-medium">
+                    {isHi ? 'आधिकारिक प्रोजेक्ट्स लिस्टिंग के लिए अधिकृत क्रेडेंशियल्स द्वारा लॉगिन करें' : 'Login using official authorized builder credentials'}
+                  </span>
+                </div>
+              </div>
+              <button
+                id="gate-login-builder-btn"
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAuth?.('hundred_builders', 'login');
+                }}
+                className="self-start sm:self-auto px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl transition cursor-pointer shadow-xs active:scale-95 shrink-0"
+              >
+                {isHi ? 'अधिकृत बिल्डर लॉगिन' : 'Builder Login'}
+              </button>
+            </div>
+
+            {/* Already have an account row */}
+            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <span className="text-slate-600 font-medium">
+                {isHi ? 'क्या आपका खाता पहले से पंजीकृत है?' : 'Already have an account?'}
+              </span>
+              <button
+                id="gate-login-existing-btn"
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAuth?.('owner', 'login');
+                }}
+                className="font-black text-amber-700 hover:text-amber-800 hover:underline cursor-pointer flex items-center space-x-1"
+              >
+                <span>{isHi ? 'यहाँ क्लिक करके लॉगिन करें (Sign In / Login)' : 'Click here to Sign In / Login'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div id="post-property-modal" className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
       <div 
@@ -579,12 +800,26 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {isEditing && propertyToEdit && onDeleteProperty && (
+              <button
+                id="edit-modal-header-delete-btn"
+                type="button"
+                onClick={() => onDeleteProperty(propertyToEdit)}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-sm active:scale-95 border border-rose-500"
+                title={isHi ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isHi ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Wizard Step Indicators */}
@@ -617,6 +852,68 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
 
         {/* Step Body */}
         <form onSubmit={handleSubmit} className="overflow-y-auto p-6 sm:p-8 space-y-6 flex-1">
+
+          {/* Edit Mode Delete Option Banner */}
+          {isEditing && propertyToEdit && (
+            <div 
+              id="edit-mode-delete-banner" 
+              className="bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-black text-rose-950 text-xs sm:text-sm">
+                    {isHi ? 'प्रॉपर्टी डिलीट (हटाने) का विकल्प' : 'Delete Property Option'}
+                  </p>
+                  <p className="text-[11px] text-rose-700 mt-0.5">
+                    {isHi 
+                      ? 'यदि आप इस लिस्टेड प्रॉपर्टी में बदलाव करने की बजाय इसे पोर्टल से स्थायी रूप से हटाना चाहते हैं, तो यहाँ क्लिक करें।' 
+                      : 'If you wish to permanently remove this listed property from the portal instead of editing, delete it here.'}
+                  </p>
+                </div>
+              </div>
+              {onDeleteProperty && (
+                <button
+                  id="btn-delete-property-edit-banner"
+                  type="button"
+                  onClick={() => onDeleteProperty(propertyToEdit)}
+                  className="self-end sm:self-auto px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-sm flex items-center space-x-1.5 transition cursor-pointer active:scale-95 shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isHi ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Authenticated User Status Badge */}
+          {authUser && (
+            <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm shrink-0">
+                  <Check className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-slate-900">
+                    {isHi ? 'अधिकृत खाता द्वारा लिस्टिंग:' : 'Listing by Verified Account:'} <span className="text-emerald-800 font-bold">{authUser.name}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 font-medium">
+                    📞 {authUser.phone} • 🏷️ {
+                      authUser.role === 'owner' ? (isHi ? 'प्रॉपर्टी मालिक' : 'Property Owner') :
+                      authUser.role === 'verified_agent' ? (isHi ? 'वेरिफाइड एजेंट' : 'Verified Agent') :
+                      authUser.role === 'hundred_builders' ? (isHi ? 'हंड्रेड बिल्डर्स अधिकृत पार्टनर' : 'Hundred Builders Partner') :
+                      (isHi ? 'रजिस्टर्ड ब्रोकर (RERA)' : 'Registered Broker (RERA)')
+                    }
+                  </div>
+                </div>
+              </div>
+              <span className="self-start sm:self-auto bg-emerald-100 text-emerald-900 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase border border-emerald-300">
+                {isHi ? 'साइन-अप सत्यापित' : 'Verified Account'}
+              </span>
+            </div>
+          )}
           
           {/* Anti-Bot Honeypot Trap (Hidden from users) */}
           <div className="hidden" aria-hidden="true" style={{ display: 'none' }}>
@@ -740,7 +1037,18 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 />
               </div>
 
-              <div className="flex justify-end pt-4">
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                {isEditing && propertyToEdit && onDeleteProperty ? (
+                  <button
+                    id="step1-delete-property-btn"
+                    type="button"
+                    onClick={() => onDeleteProperty(propertyToEdit)}
+                    className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                    <span>{isHi ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}</span>
+                  </button>
+                ) : <div />}
                 <button
                   type="button"
                   onClick={() => setStep(2)}
@@ -1006,15 +1314,28 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-between pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl flex items-center space-x-1 cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </button>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl flex items-center space-x-1 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+                  {isEditing && propertyToEdit && onDeleteProperty && (
+                    <button
+                      id="step2-delete-property-btn"
+                      type="button"
+                      onClick={() => onDeleteProperty(propertyToEdit)}
+                      className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>{isHi ? 'डिलीट' : 'Delete'}</span>
+                    </button>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setStep(3)}
@@ -1222,15 +1543,28 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-between pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl flex items-center space-x-1 cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </button>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl flex items-center space-x-1 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+                  {isEditing && propertyToEdit && onDeleteProperty && (
+                    <button
+                      id="step3-delete-property-btn"
+                      type="button"
+                      onClick={() => onDeleteProperty(propertyToEdit)}
+                      className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>{isHi ? 'डिलीट' : 'Delete'}</span>
+                    </button>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setStep(4)}
@@ -1271,6 +1605,20 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     </button>
                   ))}
                 </div>
+                {authUser && (
+                  <p className="text-[11px] text-emerald-800 font-medium mt-2 flex items-center space-x-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>
+                      {isHi
+                        ? `सत्यापित खाता: ${authUser.name} (${
+                            authUser.role === 'owner' ? 'मालिक' :
+                            authUser.role === 'verified_agent' ? 'वेरिफाइड एजेंट' :
+                            authUser.role === 'hundred_builders' ? 'हंड्रेड बिल्डर्स' : 'रजिस्टर्ड ब्रोकर'
+                          }) • लिस्टिंग इसी सत्यापित प्रोफाइल के अंतर्गत पोस्ट होगी।`
+                        : `Verified Account: ${authUser.name} (${authUser.role}) • Property will be posted under this verified profile.`}
+                    </span>
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1335,15 +1683,28 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-between pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl flex items-center space-x-1 cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </button>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl flex items-center space-x-1 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+                  {isEditing && propertyToEdit && onDeleteProperty && (
+                    <button
+                      id="step4-delete-property-btn"
+                      type="button"
+                      onClick={() => onDeleteProperty(propertyToEdit)}
+                      className="px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-black transition flex items-center space-x-1.5 cursor-pointer active:scale-95 shadow-xs"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>{isHi ? 'प्रॉपर्टी डिलीट करें' : 'Delete Property'}</span>
+                    </button>
+                  )}
+                </div>
                 <button
                   id="submit-property-listing-btn"
                   type="submit"

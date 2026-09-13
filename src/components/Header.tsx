@@ -657,15 +657,9 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="flex items-center space-x-1.5">
                           <button
                             onClick={() => { onOpenAuth('hundred_builders', 'login'); setAuthDropdownOpen(false); }}
-                            className="bg-white hover:bg-emerald-100 text-slate-800 border border-emerald-300 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shadow-xs"
                           >
-                            {lang === 'hi' ? 'लॉगिन' : 'Login'}
-                          </button>
-                          <button
-                            onClick={() => { onOpenAuth('hundred_builders', 'signup'); setAuthDropdownOpen(false); }}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
-                          >
-                            {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                            {lang === 'hi' ? 'अधिकृत लॉगिन' : 'Authorized Login'}
                           </button>
                         </div>
                       </div>
@@ -873,21 +867,15 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="flex items-center space-x-1.5">
                       <Building2 className="w-3.5 h-3.5 text-emerald-700" />
                       <span className="text-xs font-black text-slate-900">
-                        {lang === 'hi' ? 'हंड्रेड बिल्डर्स' : 'Builders'}
+                        {lang === 'hi' ? 'हंड्रेड बिल्डर्स' : 'Hundred Builders'}
                       </span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <button
                         onClick={() => { onOpenAuth('hundred_builders', 'login'); setMobileMenuOpen(false); }}
-                        className="px-2 py-1 bg-white text-slate-800 border border-emerald-300 rounded text-[11px] font-bold cursor-pointer"
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold cursor-pointer"
                       >
-                        {lang === 'hi' ? 'लॉगिन' : 'Login'}
-                      </button>
-                      <button
-                        onClick={() => { onOpenAuth('hundred_builders', 'signup'); setMobileMenuOpen(false); }}
-                        className="px-2 py-1 bg-emerald-600 text-white rounded text-[11px] font-bold cursor-pointer"
-                      >
-                        {lang === 'hi' ? 'साइनअप' : 'Sign Up'}
+                        {lang === 'hi' ? 'अधिकृत लॉगिन' : 'Login'}
                       </button>
                     </div>
                   </div>
