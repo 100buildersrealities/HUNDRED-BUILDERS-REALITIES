@@ -100,8 +100,8 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
     id: 'hundred_builders',
     titleHi: 'हंड्रेड बिल्डर्स',
     titleEn: 'Hundred Builders',
-    subtitleHi: 'आधिकारिक बिल्डर लॉगिन: मोबाइल 78059-80006, ईमेल 100buildersrealities@gmail.com एवं पासवर्ड आवश्यक',
-    subtitleEn: 'Official Builder Login: Mobile 78059-80006, Email 100buildersrealities@gmail.com & Password mandatory',
+    subtitleHi: 'आधिकारिक बिल्डर लॉगिन: केवल अधिकृत कॉर्पोरेट क्रेडेंशियल्स द्वारा सुरक्षित लॉगिन',
+    subtitleEn: 'Official Builder Login: Secure corporate login with authorized credentials only',
     badgeHi: 'हंड्रेड बिल्डर्स',
     badgeEn: 'Hundred Builders',
     colorBg: 'bg-emerald-500/10',
@@ -204,27 +204,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleRoleChange = (role: UserRole) => {
     setSelectedRole(role);
+    if (role === 'hundred_builders') {
+      setMode('login');
+    }
     setErrorMsg('');
   };
 
   const handleModeChange = (newMode: 'login' | 'signup') => {
+    if (newMode === 'signup' && selectedRole === 'hundred_builders') {
+      setErrorMsg(
+        isHi
+          ? 'हंड्रेड बिल्डर्स एक सुरक्षित कॉर्पोरेट खाता है। इसमें केवल अधिकृत लॉगिन की अनुमति है।'
+          : 'Hundred Builders is a secure corporate account. Only authorized login is permitted.'
+      );
+      return;
+    }
     setMode(newMode);
     setErrorMsg('');
   };
 
   const handleDemoLogin = (role: UserRole) => {
-    // For hundred_builders: strict security check
-    // "हंड्रेड बिल्डर्स के लिए लॉगिन करने के लिए मोबाइल नंबर 78059-80006, ईमेल आईडी 100buildersrealities@Gmail और पासवर्ड BHA1989tan@ डालने पर ही लॉगिन होनी चाहिए। इसके अलावा अन्य किसी भी तरह से लॉगिन नहीं होनी चाहिए।"
+    // For hundred_builders: no 1-click bypass is permitted
     if (role === 'hundred_builders') {
       setSelectedRole('hundred_builders');
       setMode('login');
-      setPhone('78059-80006');
-      setEmail('100buildersrealities@gmail.com');
-      setPassword('BHA1989tan@');
       setErrorMsg(
         isHi
-          ? 'हंड्रेड बिल्डर्स के अधिकृत क्रेडेंशियल्स फॉर्म में भर दिए गए हैं। कृपया नीचे "हंड्रेड बिल्डर्स लॉगिन करें" पर क्लिक करें।'
-          : 'Official Hundred Builders credentials loaded into form. Please click "Login as Hundred Builders" below to authenticate.'
+          ? 'हंड्रेड बिल्डर्स एक सुरक्षित कॉर्पोरेट खाता है। कृपया अधिकृत क्रेडेंशियल्स दर्ज करके ही लॉगिन करें।'
+          : 'Hundred Builders is a restricted corporate account. Please enter authorized credentials manually to login.'
       );
       return;
     }
@@ -246,56 +253,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     if (honeypot) return;
 
-    // Strict credential verification for Hundred Builders
+    // Strict credential verification for Hundred Builders:
+    // Mobile Number: 78059-80006
+    // Email ID: 100buildersrealities@gmail.com
+    // Password: BHA1989tan@
+    // All 3 must match simultaneously. Any other mobile, email, or password is strictly prohibited.
+    // Credentials are fully hidden from view and never exposed in errors or UI.
     if (selectedRole === 'hundred_builders') {
-      const phoneDigits = phone.replace(/\D/g, '').slice(-10);
+      const normalizedPhone = phone.replace(/[\s\-+]/g, '');
       const cleanEmail = email.trim().toLowerCase();
 
-      // Mode check: corporate master account requires login
       if (mode === 'signup') {
         setMode('login');
         setErrorMsg(
           isHi 
-            ? 'हंड्रेड बिल्डर्स एक आधिकारिक कॉर्पोरेट खाता है। कृपया अधिकृत मोबाइल (78059-80006), ईमेल (100buildersrealities@gmail.com) व पासवर्ड (BHA1989tan@) के साथ लॉगिन करें।'
-            : 'Hundred Builders is an official corporate account. Please log in using the authorized credentials.'
+            ? 'हंड्रेड बिल्डर्स में नया खाता पंजीकरण बंद है। केवल अधिकृत क्रेडेंशियल्स से लॉगिन करें।'
+            : 'New account registration is closed for Hundred Builders. Please login with authorized credentials.'
         );
         return;
       }
 
-      // 1. Mobile verification: must be 7805980006
-      if (phoneDigits !== '7805980006') {
-        setErrorMsg(
-          isHi 
-            ? 'अमान्य मोबाइल नंबर! हंड्रेड बिल्डर्स लॉगिन के लिए केवल अधिकृत मोबाइल नंबर 78059-80006 ही मान्य है।'
-            : 'Invalid mobile number! Only authorized mobile number 78059-80006 is allowed for Hundred Builders.'
-        );
-        return;
-      }
+      // Check Mobile (78059-80006 -> 7805980006 or 917805980006)
+      const isPhoneMatch = normalizedPhone === '7805980006' || normalizedPhone === '917805980006' || phone.trim() === '78059-80006';
 
-      // 2. Email verification: must be 100buildersrealities@gmail.com (or 100buildersrealities@gmail)
-      if (!cleanEmail) {
-        setErrorMsg(
-          isHi 
-            ? 'हंड्रेड बिल्डर्स लॉगिन के लिए अधिकृत ईमेल आईडी (100buildersrealities@gmail.com) दर्ज करना अनिवार्य है।'
-            : 'Email ID (100buildersrealities@gmail.com) is mandatory for Hundred Builders login.'
-        );
-        return;
-      }
-      if (cleanEmail !== '100buildersrealities@gmail.com' && cleanEmail !== '100buildersrealities@gmail') {
-        setErrorMsg(
-          isHi 
-            ? 'अमान्य ईमेल आईडी! हंड्रेड बिल्डर्स के लिए केवल 100buildersrealities@gmail.com ही मान्य है।'
-            : 'Invalid email ID! Only 100buildersrealities@gmail.com is authorized for Hundred Builders.'
-        );
-        return;
-      }
+      // Check Email (100buildersrealities@gmail.com)
+      const isEmailMatch = cleanEmail === '100buildersrealities@gmail.com';
 
-      // 3. Password verification: exact match with BHA1989tan@
-      if (password !== 'BHA1989tan@') {
+      // Check Password (BHA1989tan@)
+      const isPasswordMatch = password === 'BHA1989tan@';
+
+      if (!isPhoneMatch || !isEmailMatch || !isPasswordMatch) {
         setErrorMsg(
           isHi 
-            ? 'अमान्य पासवर्ड! हंड्रेड बिल्डर्स के लिए केवल अधिकृत पासवर्ड (BHA1989tan@) ही मान्य है।'
-            : 'Invalid password! Only authorized password BHA1989tan@ is accepted for Hundred Builders.'
+            ? 'लॉगिन विफल! हंड्रेड बिल्डर्स खाते में लॉगिन केवल सही अधिकृत मोबाइल नंबर, ईमेल आईडी एवं पासवर्ड के पूर्ण मिलान पर ही संभव है। अन्य किसी भी विवरण से लॉगिन पूर्णतः प्रतिबंधित है।'
+            : 'Authentication failed! Login to Hundred Builders requires the exact match of the authorized mobile number, email, and password. Any other credentials are strictly prohibited.'
         );
         return;
       }
@@ -427,18 +418,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             >
               <span>{isHi ? 'लॉगिन (Login)' : 'Sign In / Login'}</span>
             </button>
-            <button
-              id="auth-tab-signup"
-              type="button"
-              onClick={() => handleModeChange('signup')}
-              className={`flex-1 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center justify-center space-x-1.5 ${
-                mode === 'signup'
-                  ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <span>{isHi ? 'साइन-अप (Sign Up)' : 'Register / Sign Up'}</span>
-            </button>
+            {selectedRole === 'hundred_builders' ? (
+              <div
+                className="flex-1 py-2 text-xs font-bold rounded-xl text-slate-400 bg-slate-100 flex items-center justify-center space-x-1 cursor-not-allowed select-none"
+                title={isHi ? 'हंड्रेड बिल्डर्स में केवल अधिकृत लॉगिन उपलब्ध है' : 'Login only for Hundred Builders'}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>{isHi ? 'केवल लॉगिन' : 'Login Only'}</span>
+              </div>
+            ) : (
+              <button
+                id="auth-tab-signup"
+                type="button"
+                onClick={() => handleModeChange('signup')}
+                className={`flex-1 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center justify-center space-x-1.5 ${
+                  mode === 'signup'
+                    ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <span>{isHi ? 'साइन-अप (Sign Up)' : 'Register / Sign Up'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -494,16 +495,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {isHi ? currentConfig.subtitleHi : currentConfig.subtitleEn}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => handleDemoLogin(selectedRole)}
-            className="text-[11px] font-extrabold text-amber-700 hover:text-amber-900 bg-white border border-amber-300 px-2 py-1 rounded-lg shrink-0 shadow-2xs hover:bg-amber-100 transition cursor-pointer"
-            title={selectedRole === 'hundred_builders' ? 'अधिकृत क्रेडेंशियल फॉर्म में भरें' : 'क्लिक करके बिना फॉर्म भरे तुरंत डेमो लॉगिन करें'}
-          >
-            ⚡ {selectedRole === 'hundred_builders' 
-              ? (isHi ? 'अधिकृत क्रेडेंशियल लोड करें' : 'Load Authorized Info') 
-              : (isHi ? '1-क्लिक डेमो लॉगिन' : '1-Click Demo')}
-          </button>
+          {selectedRole !== 'hundred_builders' && (
+            <button
+              type="button"
+              onClick={() => handleDemoLogin(selectedRole)}
+              className="text-[11px] font-extrabold text-amber-700 hover:text-amber-900 bg-white border border-amber-300 px-2 py-1 rounded-lg shrink-0 shadow-2xs hover:bg-amber-100 transition cursor-pointer"
+              title="क्लिक करके बिना फॉर्म भरे तुरंत डेमो लॉगिन करें"
+            >
+              ⚡ {isHi ? '1-क्लिक डेमो लॉगिन' : '1-Click Demo'}
+            </button>
+          )}
         </div>
 
         {/* Form Body */}
@@ -535,8 +536,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
                 <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
                   {isHi
-                    ? 'हंड्रेड बिल्डर्स में केवल अधिकृत मोबाइल नंबर (78059-80006), ईमेल (100buildersrealities@gmail.com) एवं पासवर्ड (BHA1989tan@) डालने पर ही लॉगिन स्वीकार किया जाएगा। अन्य किसी भी तरह से लॉगिन नहीं हो सकती।'
-                    : 'Access requires strictly authorized Mobile (78059-80006), Email (100buildersrealities@gmail.com) and Password (BHA1989tan@). Any other credentials are blocked.'}
+                    ? 'हंड्रेड बिल्डर्स खाते में लॉगिन केवल और केवल अधिकृत मोबाइल नंबर, ईमेल आईडी एवं पासवर्ड के पूर्ण मिलान पर ही संभव है। इसके अतिरिक्त किसी भी अन्य मोबाइल, ईमेल या पासवर्ड से लॉगिन पूर्णतः प्रतिबंधित है।'
+                    : 'Access to the Hundred Builders corporate account is strictly restricted to matching authorized mobile number, email ID, and password. Any other credentials are completely prohibited.'}
                 </p>
               </div>
             </div>
@@ -695,7 +696,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder={selectedRole === 'hundred_builders' ? '78059-80006' : 'e.g. 98271 23456'}
+                  placeholder={selectedRole === 'hundred_builders' ? (isHi ? 'अधिकृत 10-अंकीय मोबाइल नंबर' : 'Authorized 10-digit mobile') : 'e.g. 98271 23456'}
                   className={`w-full bg-slate-50 border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none font-medium ${
                     selectedRole === 'hundred_builders' ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-amber-500'
                   }`}
@@ -716,7 +717,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required={selectedRole === 'hundred_builders'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={selectedRole === 'hundred_builders' ? '100buildersrealities@gmail.com' : 'user@example.com'}
+                  placeholder={selectedRole === 'hundred_builders' ? (isHi ? 'अधिकृत ईमेल आईडी दर्ज करें' : 'Authorized corporate email') : 'user@example.com'}
                   className={`w-full bg-slate-50 border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none font-medium ${
                     selectedRole === 'hundred_builders' ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-amber-500'
                   }`}
@@ -750,25 +751,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 uppercase">
                 {isHi ? 'पासवर्ड (Password) *' : 'Password *'}
               </label>
-              {mode === 'login' && (
+              {mode === 'login' && selectedRole !== 'hundred_builders' && (
                 <button
                   type="button"
                   onClick={() => {
-                    if (selectedRole === 'hundred_builders') {
-                      setPhone('78059-80006');
-                      setEmail('100buildersrealities@gmail.com');
-                      setPassword('BHA1989tan@');
-                      setErrorMsg('');
-                    } else {
-                      setPhone(currentConfig.defaultDemoUser.phone);
-                      setPassword('123456');
-                    }
+                    setPhone(currentConfig.defaultDemoUser.phone);
+                    setPassword('123456');
                   }}
                   className="text-[11px] text-amber-700 hover:text-amber-900 font-bold cursor-pointer"
                 >
-                  {selectedRole === 'hundred_builders'
-                    ? (isHi ? 'अधिकृत क्रेडेंशियल भरें' : 'Fill Authorized Credentials')
-                    : (isHi ? 'डेमो क्रेडेंशियल भरें' : 'Auto-fill Demo')}
+                  {isHi ? 'डेमो क्रेडेंशियल भरें' : 'Auto-fill Demo'}
                 </button>
               )}
             </div>
@@ -779,7 +771,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={selectedRole === 'hundred_builders' ? '•••••••• (BHA1989tan@)' : '••••••••'}
+                placeholder="••••••••"
                 className={`w-full bg-slate-50 border rounded-xl pl-9 pr-10 py-2 text-xs focus:outline-none font-medium ${
                   selectedRole === 'hundred_builders' ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-amber-500'
                 }`}
@@ -815,12 +807,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            {/* Quick Demo Login Pill for all 4 roles */}
+            {/* Quick Demo Login Pill for public roles */}
             <div className="pt-3 border-t border-slate-200">
               <span className="text-[11px] font-bold text-slate-500 block text-center mb-2">
                 {isHi ? 'या 1-क्लिक से सीधे संबंधित पोर्टल में डेमो लॉगिन करें:' : 'Or test immediately with 1-click Demo Login:'}
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleDemoLogin('owner')}
@@ -836,14 +828,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   title="एजेंट डेमो लॉगिन"
                 >
                   🛡️ {isHi ? 'एजेंट डेमो' : 'Agent Demo'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDemoLogin('hundred_builders')}
-                  className="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition cursor-pointer truncate"
-                  title="हंड्रेड बिल्डर्स अधिकृत क्रेडेंशियल भरें"
-                >
-                  🏢 {isHi ? 'बिल्डर क्रेडेंशियल' : 'Builder Auth'}
                 </button>
                 <button
                   type="button"
