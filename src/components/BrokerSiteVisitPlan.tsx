@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Car,
   MapPin,
@@ -20,10 +20,16 @@ import {
   Check,
   AlertTriangle,
   RotateCcw,
-  Share2
+  Share2,
+  Clock,
+  XCircle,
+  Lock,
+  RefreshCw,
+  UserCheck
 } from 'lucide-react';
 import { Language } from '../data/translations';
 import { BrokerRegistration } from '../types';
+import { secureRetrieve } from '../utils/security';
 
 interface BrokerSiteVisitPlanProps {
   lang: Language;
@@ -44,18 +50,58 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
   const [isDealBookingBonus, setIsDealBookingBonus] = useState<boolean>(false);
   const [brokerTier, setBrokerTier] = useState<'bronze' | 'silver' | 'gold'>('silver');
 
-  // 6-step Verification Workflow State
+  // Load genuine registered partners from secure storage (filter out any legacy demo codes)
+  const [registeredPartners, setRegisteredPartners] = useState<BrokerRegistration[]>(() => {
+    const list = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
+    return list.filter(
+      (p) => !p.id.includes('HB-PARTNER') && !p.id.toLowerCase().includes('demo')
+    );
+  });
+
+  // Function to refresh registered partners list
+  const refreshPartnersList = () => {
+    const list = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
+    setRegisteredPartners(
+      list.filter((p) => !p.id.includes('HB-PARTNER') && !p.id.toLowerCase().includes('demo'))
+    );
+  };
+
+  // 6-step Verification Workflow State - NO DEMO CODES
   const [verifyStep, setVerifyStep] = useState<number>(1);
-  const [brokerIdInput, setBrokerIdInput] = useState<string>(savedBroker?.id || 'HB-PARTNER-7824');
-  const [customerName, setCustomerName] = useState<string>('राजेश शर्मा (Rajesh Sharma)');
-  const [customerPhone, setCustomerPhone] = useState<string>('9826189000');
-  const [propertyVisited, setPropertyVisited] = useState<string>('Royal City Township & Farm Villa, Abhanpur');
+  const [brokerIdInput, setBrokerIdInput] = useState<string>(savedBroker?.id || '');
+  const [customerName, setCustomerName] = useState<string>('');
+  const [customerPhone, setCustomerPhone] = useState<string>('');
+  const [propertyVisited, setPropertyVisited] = useState<string>('');
   const [otpInput, setOtpInput] = useState<string>('');
   const [otpSent, setOtpSent] = useState<boolean>(false);
   const [otpVerified, setOtpVerified] = useState<boolean>(false);
   const [isGpsLocked, setIsGpsLocked] = useState<boolean>(false);
   const [isPhotoCaptured, setIsPhotoCaptured] = useState<boolean>(false);
   const [claimSubmitted, setClaimSubmitted] = useState<boolean>(false);
+  const [customerFormError, setCustomerFormError] = useState<string | null>(null);
+
+  // Sync with savedBroker if changed
+  useEffect(() => {
+    if (savedBroker?.id && !brokerIdInput) {
+      setBrokerIdInput(savedBroker.id);
+    }
+  }, [savedBroker]);
+
+  // Partner Verification Logic against Registered & Active database
+  const cleanInput = brokerIdInput.trim().toUpperCase();
+  const matchedPartner =
+    registeredPartners.find((p) => p.id.trim().toUpperCase() === cleanInput) ||
+    (savedBroker && savedBroker.id.trim().toUpperCase() === cleanInput ? savedBroker : null);
+
+  const isInputBlank = cleanInput.length === 0;
+  const isInvalidCode = !isInputBlank && !matchedPartner;
+  const isCodePending =
+    Boolean(matchedPartner) &&
+    matchedPartner?.activationStatus !== 'activated' &&
+    matchedPartner?.status !== 'verified_active';
+  const isCodeVerifiedAndActive =
+    Boolean(matchedPartner) &&
+    (matchedPartner?.activationStatus === 'activated' || matchedPartner?.status === 'verified_active');
 
   // Helper functions for incentive calculations
   const calculateAreaIncentive = (acres: number): number => {
@@ -645,46 +691,165 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
         {/* Step-by-Step Interactive Form */}
         <div className="p-5 sm:p-7">
           
-          {/* STEP 1: Broker ID */}
+          {/* STEP 1: Broker ID Validation against Registered & Active Database */}
           {verifyStep === 1 && (
             <div className="space-y-4 max-w-lg mx-auto py-2">
               <div className="text-center space-y-1">
                 <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                  चरण 1: अधिकृत ब्रोकर आईडी दर्ज करें
+                  चरण 1: अधिकृत एवं सत्यापित पार्टनर आईडी
                 </span>
-                <h5 className="text-lg font-bold text-slate-900">आपकी करियर केयर पार्टनर आईडी</h5>
+                <h5 className="text-lg font-bold text-slate-900">आपकी करियर केयर पार्टनर आईडी (Partner ID)</h5>
                 <p className="text-xs text-slate-500">
-                  हंड्रेड बिल्डर्स का रजिस्टर्ड पार्टनर कोड दर्ज करें ताकि इंसेंटिव आपके खाते में क्रेडिट हो सके।
+                  साइड विजिट इनकम प्लान में केवल सत्यापित व सक्रिय रजिस्टर्ड पार्टनर आईडी कोड ही स्वीकार किए जाते हैं।
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  पार्टनर आईडी कोड (Partner ID)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    पार्टनर आईडी कोड (Partner ID)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={refreshPartnersList}
+                    className="text-[11px] text-amber-700 hover:text-amber-800 flex items-center space-x-1 cursor-pointer font-medium"
+                    title="डेटाबेस रिफ्रेश करें"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>डेटाबेस रिफ्रेश</span>
+                  </button>
+                </div>
+
                 <div className="relative">
                   <input
                     type="text"
                     value={brokerIdInput}
                     onChange={(e) => setBrokerIdInput(e.target.value)}
-                    placeholder="उदा. HB-PARTNER-7824"
-                    className="w-full pl-3.5 pr-10 py-3 rounded-xl border border-slate-300 font-mono text-sm font-bold uppercase focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    placeholder="उदा. HBR-BRK-2026-3105"
+                    className={`w-full pl-3.5 pr-10 py-3 rounded-xl border font-mono text-sm font-bold uppercase transition focus:ring-2 ${
+                      isCodeVerifiedAndActive
+                        ? 'border-emerald-500 bg-emerald-50/20 text-emerald-900 focus:ring-emerald-500'
+                        : isCodePending
+                        ? 'border-amber-500 bg-amber-50/20 text-amber-900 focus:ring-amber-500'
+                        : isInvalidCode
+                        ? 'border-rose-500 bg-rose-50/20 text-rose-900 focus:ring-rose-500'
+                        : 'border-slate-300 text-slate-900 focus:ring-amber-500'
+                    }`}
                   />
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 absolute right-3 top-3" />
+                  <div className="absolute right-3 top-3">
+                    {isCodeVerifiedAndActive && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                    {isCodePending && <Clock className="w-5 h-5 text-amber-600" />}
+                    {isInvalidCode && <XCircle className="w-5 h-5 text-rose-600" />}
+                    {isInputBlank && <Lock className="w-4 h-4 text-slate-400 mt-0.5" />}
+                  </div>
                 </div>
-                {savedBroker && (
-                  <p className="text-[11px] text-emerald-700 font-semibold">
-                    ✓ आपके सक्रिय प्रोफाइल ({savedBroker.fullName}) से कोड स्वतः भरा गया है।
-                  </p>
+
+                {/* Case 1: Empty input guidance */}
+                {isInputBlank && (
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
+                    <p className="flex items-center space-x-1.5 font-medium">
+                      <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>100 BUILDERS करियर केयर पोर्टल द्वारा जारी अपना अधिकृत कोड दर्ज करें।</span>
+                    </p>
+                    {onOpenRegister && (
+                      <button
+                        type="button"
+                        onClick={onOpenRegister}
+                        className="text-amber-800 font-bold hover:underline block pt-0.5 cursor-pointer text-[11px]"
+                      >
+                        यदि आप नए एसोसिएट पार्टनर हैं, तो निःशुल्क पंजीकरण करें →
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Case 2: REJECTED - Invalid / Not registered code */}
+                {isInvalidCode && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-900 space-y-1.5 animate-in fade-in duration-150">
+                    <div className="flex items-center space-x-2 font-black text-xs text-rose-800">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>❌ गलत रजिस्टर्ड पार्टनर आईडी कोड अस्वीकार कर दिया गया!</span>
+                    </div>
+                    <p className="text-[11px] text-rose-700 leading-relaxed">
+                      कोड <strong>"{brokerIdInput.trim().toUpperCase()}"</strong> 100 BUILDERS REALITIES के करियर केयर डेटाबेस में पंजीकृत नहीं है। साइड विजिट इनकम केवल अधिकृत व सत्यापित पार्टनर कोड पर ही देय है।
+                    </p>
+                    {onOpenRegister && (
+                      <button
+                        type="button"
+                        onClick={onOpenRegister}
+                        className="inline-flex items-center space-x-1 px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition cursor-pointer mt-1"
+                      >
+                        <span>करियर केयर में नया पंजीकरण करें →</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Case 3: PENDING ACTIVATION - Registered but not yet activated by Corporate */}
+                {isCodePending && (
+                  <div className="p-3.5 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-950 space-y-1.5 animate-in fade-in duration-150">
+                    <div className="flex items-center space-x-2 font-black text-xs text-amber-900">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>⏳ पार्टनर कोड पंजीकरण प्राप्त है, परंतु कॉर्पोरेट सक्रियण (Activation) प्रतीक्षारत है</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      पार्टनर नाम: <strong>{matchedPartner?.fullName}</strong> ({matchedPartner?.city})
+                      <br />
+                      <strong>नियम:</strong> करियर केयर पोर्टल में पंजीकृत एसोसिएट पार्टनर्स का कोड सक्रिय (Activate) करने एवं विवरण साझा करने का संपूर्ण अधिकार <strong>हंड्रेड बिल्डर्स सुरक्षित कॉर्पोरेट लॉगिन</strong> के पास सुरक्षित है। मुख्यालय से सक्रिय होने के पश्चात ही साइट विजिट इंसेंटिव क्लेम किया जा सकता है।
+                    </p>
+                  </div>
+                )}
+
+                {/* Case 4: APPROVED - Fully verified and activated by Corporate */}
+                {isCodeVerifiedAndActive && (
+                  <div className="p-3.5 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-emerald-950 space-y-1.5 animate-in fade-in duration-150 shadow-xs">
+                    <div className="flex items-center space-x-2 font-black text-xs text-emerald-800">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>✅ सत्यापित एवं सक्रिय एसोसिएट पार्टनर कोड (Corporate Verified)</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] text-emerald-900 border-t border-emerald-200/80">
+                      <div>
+                        <span className="text-emerald-700">पार्टनर नाम:</span>{' '}
+                        <strong className="text-slate-900">{matchedPartner?.fullName}</strong>
+                      </div>
+                      <div>
+                        <span className="text-emerald-700">मोबाइल:</span>{' '}
+                        <span className="font-mono font-bold text-slate-900">+91 {matchedPartner?.phone}</span>
+                      </div>
+                      <div>
+                        <span className="text-emerald-700">शहर / क्षेत्र:</span>{' '}
+                        <span className="text-slate-900">{matchedPartner?.operatingAreas} ({matchedPartner?.city})</span>
+                      </div>
+                      <div>
+                        <span className="text-emerald-700">कॉर्पोरेट सील:</span>{' '}
+                        <span className="font-mono text-emerald-800 font-bold">{matchedPartner?.corporateSealId || 'HBR-CORP-SEAL-VERIFIED'}</span>
+                      </div>
+                    </div>
+                    {matchedPartner?.activatedAt && (
+                      <div className="text-[10px] text-emerald-700 font-medium pt-0.5">
+                        सक्रियण तिथि: {matchedPartner.activatedAt} (100 BUILDERS मुख्यालय द्वारा अधिकृत)
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
+              {/* Next Button - strictly gated by active verification */}
               <button
                 type="button"
-                onClick={() => setVerifyStep(2)}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition cursor-pointer flex items-center justify-center space-x-2 shadow-md"
+                disabled={!isCodeVerifiedAndActive}
+                onClick={() => {
+                  if (isCodeVerifiedAndActive) {
+                    setVerifyStep(2);
+                  }
+                }}
+                className={`w-full font-bold py-3 px-4 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-md ${
+                  isCodeVerifiedAndActive
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-98'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                }`}
               >
-                <span>अगला: ग्राहक विवरण भरें</span>
+                <span>{isCodeVerifiedAndActive ? 'सत्यापित: अगला (ग्राहक विवरण भरें)' : 'सत्यापित सक्रिय पार्टनर आईडी अनिवार्य है'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -703,43 +868,59 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
                 </p>
               </div>
 
+              {customerFormError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-800 text-xs font-medium flex items-center space-x-1.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{customerFormError}</span>
+                </div>
+              )}
+
               <div className="space-y-3 text-xs">
                 <div>
                   <label className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    ग्राहक का नाम (Customer Full Name)
+                    ग्राहक का नाम (Customer Full Name) *
                   </label>
                   <input
                     type="text"
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="ग्राहक का नाम लिखें"
-                    className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-medium"
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      if (customerFormError) setCustomerFormError(null);
+                    }}
+                    placeholder="ग्राहक का पूरा नाम लिखें"
+                    className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
                 <div>
                   <label className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    ग्राहक का मोबाइल नंबर (10-Digit Mobile)
+                    ग्राहक का मोबाइल नंबर (10-Digit Mobile) *
                   </label>
                   <input
                     type="tel"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onChange={(e) => {
+                      setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
+                      if (customerFormError) setCustomerFormError(null);
+                    }}
                     placeholder="उदा. 9826189000"
-                    className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-medium font-mono"
+                    className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-medium font-mono focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
                 <div>
                   <label className="font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    साइट / जमीन का नाम व स्थान (Property Location)
+                    साइट / जमीन का नाम व स्थान (Property Location) *
                   </label>
                   <input
                     type="text"
                     value={propertyVisited}
-                    onChange={(e) => setPropertyVisited(e.target.value)}
-                    placeholder="प्रॉपर्टी का नाम / खसरा / गांव"
-                    className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-medium"
+                    onChange={(e) => {
+                      setPropertyVisited(e.target.value);
+                      if (customerFormError) setCustomerFormError(null);
+                    }}
+                    placeholder="प्रॉपर्टी का नाम / खसरा / गांव / टाउनशिप"
+                    className="w-full p-2.5 rounded-lg border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
@@ -755,6 +936,18 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    if (customerName.trim().length < 2) {
+                      setCustomerFormError('कृपया ग्राहक का वैध नाम दर्ज करें।');
+                      return;
+                    }
+                    if (customerPhone.replace(/\D/g, '').length !== 10) {
+                      setCustomerFormError('कृपया ग्राहक का 10 अंकों का वैध मोबाइल नंबर दर्ज करें।');
+                      return;
+                    }
+                    if (propertyVisited.trim().length < 3) {
+                      setCustomerFormError('कृपया विजिट की गई साइट / लोकेशन का नाम दर्ज करें।');
+                      return;
+                    }
                     handleSendOtp();
                     setVerifyStep(3);
                   }}
@@ -977,8 +1170,14 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
                 <div className="space-y-1.5 text-slate-300 text-[11px]">
                   <div className="flex justify-between">
                     <span>ब्रोकर पार्टनर कोड:</span>
-                    <span className="text-white font-bold">{brokerIdInput}</span>
+                    <span className="text-white font-bold">{brokerIdInput} ({matchedPartner?.fullName || savedBroker?.fullName || 'सत्यापित पार्टनर'})</span>
                   </div>
+                  {(matchedPartner?.corporateSealId || savedBroker?.corporateSealId) && (
+                    <div className="flex justify-between text-amber-300">
+                      <span>कॉर्पोरेट अधिकृत सील:</span>
+                      <span className="font-mono font-bold">{matchedPartner?.corporateSealId || savedBroker?.corporateSealId}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>सत्यापित ग्राहक:</span>
                     <span className="text-white">{customerName} (+91 {customerPhone})</span>

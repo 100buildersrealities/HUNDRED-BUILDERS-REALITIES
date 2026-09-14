@@ -29,6 +29,7 @@ import { BrokerRegistration } from '../types';
 import { Language } from '../data/translations';
 import { CHHATTISGARH_CITIES, MADHYA_PRADESH_CITIES } from '../data/mockProperties';
 import { BrokerSiteVisitPlan } from './BrokerSiteVisitPlan';
+import { CareerCareCorporateManager } from './CareerCareCorporateManager';
 import {
   sanitizeText,
   validateUploadedFile,
@@ -44,16 +45,20 @@ interface CareerCareModalProps {
   isOpen: boolean;
   onClose: () => void;
   lang: Language;
+  isCorporateLoggedIn?: boolean;
+  onOpenCorporateLogin?: () => void;
 }
 
 export const CareerCareModal: React.FC<CareerCareModalProps> = ({
   isOpen,
   onClose,
   lang,
+  isCorporateLoggedIn,
+  onOpenCorporateLogin,
 }) => {
   // Active step in registration form
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [activeView, setActiveView] = useState<'form' | 'success' | 'my_id' | 'site_visit_plan'>('form');
+  const [activeView, setActiveView] = useState<'form' | 'success' | 'my_id' | 'site_visit_plan' | 'corporate_manager'>('form');
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -290,16 +295,20 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
         month: 'short',
         year: 'numeric'
       }),
-      status: 'verified_active'
+      status: 'under_review',
+      activationStatus: 'pending'
     };
 
     // Save using tamper-evident checksum storage
     try {
       secureStore('hb_career_care_broker_profile', newRegistration);
       
-      // Also add to broker list securely
+      // Also add to broker list securely (filtering legacy demo IDs)
       const existingList = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
-      secureStore('hb_career_care_all_brokers', [newRegistration, ...existingList]);
+      const cleanList = existingList.filter(
+        (b) => !b.id.includes('HB-PARTNER') && !b.id.toLowerCase().includes('demo')
+      );
+      secureStore('hb_career_care_all_brokers', [newRegistration, ...cleanList]);
     } catch (err) {
       console.error(err);
     }
@@ -362,6 +371,20 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              id="btn-header-corporate-login"
+              onClick={() => setActiveView('corporate_manager')}
+              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                activeView === 'corporate_manager'
+                  ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300'
+                  : 'bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>सुरक्षित कॉर्पोरेट लॉगिन</span>
+            </button>
+
             {savedRegistration && activeView === 'form' && (
               <button
                 type="button"
@@ -431,8 +454,27 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
               <Car className="w-3.5 h-3.5 text-amber-400" />
               <span>साइट विजिट इनकम प्लान</span>
               <span className="bg-emerald-500/30 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded font-mono font-bold">
-                NEW
+                सत्यापित केवल
               </span>
+            </button>
+
+            <button
+              type="button"
+              id="career-care-tab-corporate-manager"
+              onClick={() => setActiveView('corporate_manager')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeView === 'corporate_manager'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md font-black ring-2 ring-emerald-300'
+                  : 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/80 hover:text-white'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>सुरक्षित कॉर्पोरेट लॉगिन</span>
+              {isCorporateLoggedIn && (
+                <span className="bg-emerald-400 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                  अधिकृत
+                </span>
+              )}
             </button>
 
             {savedRegistration && (
@@ -461,6 +503,21 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
         {/* Modal Body Container */}
         <div className="overflow-y-auto flex-1 p-4 sm:p-8 bg-slate-50">
 
+          {/* VIEW: HUNDRED BUILDERS CORPORATE MANAGER (ACTIVATION & SHARING EXCLUSIVE) */}
+          {activeView === 'corporate_manager' && (
+            <CareerCareCorporateManager
+              lang={lang}
+              isCorporateLoggedIn={Boolean(isCorporateLoggedIn)}
+              onOpenCorporateLogin={onOpenCorporateLogin || (() => {})}
+              onPartnerUpdated={(updated) => {
+                if (savedRegistration && savedRegistration.id === updated.id) {
+                  setSavedRegistration(updated);
+                  secureStore('hb_career_care_broker_profile', updated);
+                }
+              }}
+            />
+          )}
+
           {/* VIEW 0: BROKER SITE VISIT EXPENSE & DAILY INCOME PLAN */}
           {activeView === 'site_visit_plan' && (
             <BrokerSiteVisitPlan
@@ -477,10 +534,31 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
                 <div className="w-16 h-16 bg-emerald-100 border-2 border-emerald-500 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
-                <h3 className="text-2xl font-black text-slate-900">बधाई हो! आपका रजिस्ट्रेशन सफल रहा</h3>
+                <h3 className="text-2xl font-black text-slate-900">बधाई हो! आपका आवेदन सफलतापूर्वक दर्ज हुआ</h3>
                 <p className="text-sm text-slate-600 max-w-md mx-auto">
-                  आप HUNDRED BUILDERS REALITIES के अधिकृत रियल एस्टेट ब्रोकर / एसोसिएट पार्टनर के रूप में पंजीकृत हो गए हैं।
+                  आप HUNDRED BUILDERS REALITIES के अधिकृत करियर केयर पोर्टल में पंजीकृत हो गए हैं।
                 </p>
+              </div>
+
+              {/* Corporate Security Governance Notice */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-400/60 text-slate-800 space-y-2 text-xs">
+                <div className="flex items-center space-x-2 font-bold text-amber-900">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>हंड्रेड बिल्डर्स सुरक्षित कॉर्पोरेट विशेषाधिकार नियम:</span>
+                </div>
+                <p className="text-[12px] leading-relaxed text-slate-700">
+                  करियर केयर (Career Care) पोर्टल में पंजीकृत होने वाले <strong>एसोसिएट पार्टनर का कोड सक्रिय करने एवं डिटेल साझा करने का अधिकार केवल हंड्रेड बिल्डर्स सुरक्षित कॉर्पोरेट लॉगिन</strong> के पास है। मुख्यालय द्वारा समीक्षा पूर्ण होने पर आपका कोड सक्रिय कर दिया जाएगा।
+                </p>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-slate-500">हेड ऑफिस हेल्पलाइन: +91 78059-80006</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('corporate_manager')}
+                    className="text-xs font-bold text-emerald-700 hover:underline flex items-center space-x-1"
+                  >
+                    <span>कॉर्पोरेट डेस्क देखें →</span>
+                  </button>
+                </div>
               </div>
 
               {/* Digital Broker ID Card */}
@@ -507,8 +585,12 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="inline-block px-2.5 py-1 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold text-xs">
-                      सक्रिय (ACTIVE)
+                    <span className={`inline-block px-2.5 py-1 rounded border font-bold text-xs ${
+                      savedRegistration.activationStatus === 'activated'
+                        ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300'
+                        : 'bg-amber-500/20 border-amber-400/40 text-amber-300'
+                    }`}>
+                      {savedRegistration.activationStatus === 'activated' ? 'सक्रिय (CORPORATE ACTIVATED ✓)' : 'समीक्षाधीन (PENDING ACTIVATION)'}
                     </span>
                     <p className="text-[10px] text-slate-400 mt-1">100% Free Lifetime</p>
                   </div>
@@ -542,6 +624,12 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
                     <span className="text-[11px] text-slate-400 uppercase tracking-wider block">ड्राइविंग लाइसेंस (DL No.)</span>
                     <span className="text-xs text-slate-300">{savedRegistration.drivingLicenseNumber}</span>
                   </div>
+                  {savedRegistration.corporateSealId && (
+                    <div className="sm:col-span-2 bg-emerald-950/60 p-2.5 rounded-xl border border-emerald-500/40">
+                      <span className="text-[11px] text-emerald-300 uppercase tracking-wider block">कॉर्पोरेट अधिकृत सील</span>
+                      <span className="text-xs font-mono font-bold text-white">{savedRegistration.corporateSealId} ({savedRegistration.activatedBy})</span>
+                    </div>
+                  )}
                   <div className="sm:col-span-2">
                     <span className="text-[11px] text-slate-400 uppercase tracking-wider block">कार्य क्षेत्र व पता (Operating Base)</span>
                     <span className="text-xs text-slate-200">
@@ -601,7 +689,7 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
           {activeView === 'my_id' && savedRegistration && (
             <div className="space-y-6 max-w-2xl mx-auto py-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-slate-900">आपका सक्रिय करियर केयर ब्रोकर प्रोफाइल</h3>
+                <h3 className="text-xl font-black text-slate-900">आपका करियर केयर ब्रोकर प्रोफाइल</h3>
                 <button
                   type="button"
                   onClick={() => setActiveView('form')}
@@ -610,6 +698,28 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
                   नया फॉर्म भरें / विवरण अपडेट करें →
                 </button>
               </div>
+
+              {/* Status Banner */}
+              {savedRegistration.activationStatus !== 'activated' ? (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>कोड सक्रियण स्थिति: <strong>समीक्षाधीन (Pending Corporate Activation)</strong></span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('corporate_manager')}
+                    className="font-bold underline text-amber-950"
+                  >
+                    कॉर्पोरेट डेस्क देखें
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>सत्यापित कोड: <strong>हंड्रेड बिल्डर्स कॉर्पोरेट द्वारा सक्रिय एवं अधिकृत</strong> (सील: {savedRegistration.corporateSealId || 'HBR-CORP-SEAL'})</span>
+                </div>
+              )}
 
               {/* ID Card Display */}
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-400 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white p-6 sm:p-7">
@@ -630,8 +740,12 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="inline-block px-2.5 py-1 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold text-xs">
-                      वेरिफाइड (ACTIVE)
+                    <span className={`inline-block px-2.5 py-1 rounded border font-bold text-xs ${
+                      savedRegistration.activationStatus === 'activated'
+                        ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300'
+                        : 'bg-amber-500/20 border-amber-400/40 text-amber-300'
+                    }`}>
+                      {savedRegistration.activationStatus === 'activated' ? 'सक्रिय (CORPORATE ACTIVATED ✓)' : 'समीक्षाधीन (PENDING ACTIVATION)'}
                     </span>
                   </div>
                 </div>
@@ -661,6 +775,12 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
                     <span className="text-[11px] text-slate-400 uppercase tracking-wider block">ड्राइविंग लाइसेंस</span>
                     <span className="text-xs text-slate-300">{savedRegistration.drivingLicenseNumber}</span>
                   </div>
+                  {savedRegistration.corporateSealId && (
+                    <div className="sm:col-span-2 bg-emerald-950/60 p-2.5 rounded-xl border border-emerald-500/40">
+                      <span className="text-[11px] text-emerald-300 uppercase tracking-wider block">कॉर्पोरेट अधिकृत सील</span>
+                      <span className="text-xs font-mono font-bold text-white">{savedRegistration.corporateSealId} ({savedRegistration.activatedBy})</span>
+                    </div>
+                  )}
                   <div className="sm:col-span-2">
                     <span className="text-[11px] text-slate-400 uppercase tracking-wider block">पता</span>
                     <span className="text-xs text-slate-200">
@@ -683,6 +803,14 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
                 >
                   <Car className="w-4 h-4" />
                   <span>साइट विजिट इनकम प्लान</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('corporate_manager')}
+                  className="inline-flex items-center space-x-2 bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>सुरक्षित कॉर्पोरेट लॉगिन</span>
                 </button>
                 <button
                   type="button"

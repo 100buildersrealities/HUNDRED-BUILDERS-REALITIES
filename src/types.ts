@@ -290,4 +290,11 @@ export interface BrokerRegistration {
 
   registeredAt: string;
   status: 'verified_active' | 'under_review';
+  activationStatus?: 'pending' | 'activated' | 'suspended';
+  activatedAt?: string;
+  activatedBy?: string;
+  corporateSealId?: string;
+  corporateNotes?: string;
+  lastSharedAt?: string;
+  lastSharedChannel?: 'whatsapp' | 'email' | 'printed' | 'clipboard';
 }

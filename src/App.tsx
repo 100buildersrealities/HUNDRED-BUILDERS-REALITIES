@@ -986,6 +986,10 @@ export default function App() {
         isOpen={isCareerCareOpen}
         onClose={() => setIsCareerCareOpen(false)}
         lang={lang}
+        isCorporateLoggedIn={authUser?.role === 'hundred_builders'}
+        onOpenCorporateLogin={() => {
+          handleOpenAuth('hundred_builders', 'login', 'default');
+        }}
       />
 
       {/* Comprehensive Real Estate Footer */}
