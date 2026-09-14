@@ -13,7 +13,8 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Sprout,
-  FileSignature
+  FileSignature,
+  LayoutGrid
 } from 'lucide-react';
 import { Language, translations } from '../data/translations';
 import { PurposeType } from '../types';
@@ -144,6 +145,18 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({
           
           {/* Purpose Tabs */}
           <div className="flex items-center space-x-2 pb-4 border-b border-slate-100 overflow-x-auto no-scrollbar">
+            <button
+              id="hero-tab-all"
+              onClick={() => onSelectPurpose('all')}
+              className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-sm transition cursor-pointer flex items-center space-x-2 whitespace-nowrap ${
+                activePurpose === 'all'
+                  ? 'bg-amber-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>{t.all || (lang === 'hi' ? 'सभी लिस्टिंग' : 'All Listings')}</span>
+            </button>
             <button
               id="hero-tab-buy"
               onClick={() => onSelectPurpose('buy')}

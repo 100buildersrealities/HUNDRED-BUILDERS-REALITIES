@@ -325,8 +325,19 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
           </div>
 
-          {/* Center Category Links (Buy, Rent, Commercial, Plots) */}
+          {/* Center Category Links (All, Buy, Rent, Commercial, Plots) */}
           <nav className="hidden lg:flex items-center space-x-1">
+            <button
+              id="nav-tab-all"
+              onClick={() => onSelectTab('all')}
+              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-amber-500 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              {t.all || (lang === 'hi' ? 'सभी लिस्टिंग' : 'All Listings')}
+            </button>
             <button
               id="nav-tab-buy"
               onClick={() => onSelectTab('buy')}
@@ -940,6 +951,13 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <button
+              id="mobile-nav-tab-all"
+              onClick={() => { onSelectTab('all'); setMobileMenuOpen(false); }}
+              className={`p-2.5 rounded-lg text-center font-bold text-sm ${activeTab === 'all' ? 'bg-amber-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700'}`}
+            >
+              {t.all || (lang === 'hi' ? 'सभी लिस्टिंग' : 'All Listings')}
+            </button>
             <button
               onClick={() => { onSelectTab('buy'); setMobileMenuOpen(false); }}
               className={`p-2.5 rounded-lg text-center font-bold text-sm ${activeTab === 'buy' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-700'}`}

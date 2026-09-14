@@ -30,6 +30,7 @@ import {
 import { Language } from '../data/translations';
 import { BrokerRegistration } from '../types';
 import { secureRetrieve } from '../utils/security';
+import { isDemoPartnerRecord } from './CareerCareCorporateManager';
 
 interface BrokerSiteVisitPlanProps {
   lang: Language;
@@ -50,25 +51,25 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
   const [isDealBookingBonus, setIsDealBookingBonus] = useState<boolean>(false);
   const [brokerTier, setBrokerTier] = useState<'bronze' | 'silver' | 'gold'>('silver');
 
-  // Load genuine registered partners from secure storage (filter out any legacy demo codes)
+  // Load genuine registered partners from secure storage (strictly purge any demo codes)
   const [registeredPartners, setRegisteredPartners] = useState<BrokerRegistration[]>(() => {
     const list = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
-    return list.filter(
-      (p) => !p.id.includes('HB-PARTNER') && !p.id.toLowerCase().includes('demo')
-    );
+    return list.filter((p) => !isDemoPartnerRecord(p));
   });
 
   // Function to refresh registered partners list
   const refreshPartnersList = () => {
     const list = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
     setRegisteredPartners(
-      list.filter((p) => !p.id.includes('HB-PARTNER') && !p.id.toLowerCase().includes('demo'))
+      list.filter((p) => !isDemoPartnerRecord(p))
     );
   };
 
   // 6-step Verification Workflow State - NO DEMO CODES
   const [verifyStep, setVerifyStep] = useState<number>(1);
-  const [brokerIdInput, setBrokerIdInput] = useState<string>(savedBroker?.id || '');
+  const [brokerIdInput, setBrokerIdInput] = useState<string>(
+    savedBroker && !isDemoPartnerRecord(savedBroker) ? savedBroker.id : ''
+  );
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [propertyVisited, setPropertyVisited] = useState<string>('');
@@ -80,9 +81,9 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
   const [claimSubmitted, setClaimSubmitted] = useState<boolean>(false);
   const [customerFormError, setCustomerFormError] = useState<string | null>(null);
 
-  // Sync with savedBroker if changed
+  // Sync with savedBroker if changed and not demo
   useEffect(() => {
-    if (savedBroker?.id && !brokerIdInput) {
+    if (savedBroker?.id && !isDemoPartnerRecord(savedBroker) && !brokerIdInput) {
       setBrokerIdInput(savedBroker.id);
     }
   }, [savedBroker]);
@@ -725,7 +726,7 @@ export const BrokerSiteVisitPlan: React.FC<BrokerSiteVisitPlanProps> = ({
                     type="text"
                     value={brokerIdInput}
                     onChange={(e) => setBrokerIdInput(e.target.value)}
-                    placeholder="उदा. HBR-BRK-2026-3105"
+                    placeholder="उदा. HBR-BRK-2026-XXXX"
                     className={`w-full pl-3.5 pr-10 py-3 rounded-xl border font-mono text-sm font-bold uppercase transition focus:ring-2 ${
                       isCodeVerifiedAndActive
                         ? 'border-emerald-500 bg-emerald-50/20 text-emerald-900 focus:ring-emerald-500'

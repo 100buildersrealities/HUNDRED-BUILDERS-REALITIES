@@ -29,7 +29,7 @@ import { BrokerRegistration } from '../types';
 import { Language } from '../data/translations';
 import { CHHATTISGARH_CITIES, MADHYA_PRADESH_CITIES } from '../data/mockProperties';
 import { BrokerSiteVisitPlan } from './BrokerSiteVisitPlan';
-import { CareerCareCorporateManager } from './CareerCareCorporateManager';
+import { CareerCareCorporateManager, isDemoPartnerRecord } from './CareerCareCorporateManager';
 import {
   sanitizeText,
   validateUploadedFile,
@@ -104,9 +104,14 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [honeypot, setHoneypot] = useState('');
 
-  // Registered Profile (loaded with tamper-evident secure storage)
+  // Registered Profile (loaded with tamper-evident secure storage, purged of any demo accounts)
   const [savedRegistration, setSavedRegistration] = useState<BrokerRegistration | null>(() => {
-    return secureRetrieve<BrokerRegistration | null>('hb_career_care_broker_profile', null);
+    const profile = secureRetrieve<BrokerRegistration | null>('hb_career_care_broker_profile', null);
+    if (profile && isDemoPartnerRecord(profile)) {
+      secureStore('hb_career_care_broker_profile', null);
+      return null;
+    }
+    return profile;
   });
 
   // Keep saved registration up to date
@@ -124,6 +129,20 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
       }));
     }
   }, [savedRegistration]);
+
+  // Ensure all demo partners are strictly purged from local storage
+  useEffect(() => {
+    const list = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
+    const cleanList = list.filter((b) => !isDemoPartnerRecord(b));
+    if (cleanList.length !== list.length) {
+      secureStore('hb_career_care_all_brokers', cleanList);
+    }
+    const profile = secureRetrieve<BrokerRegistration | null>('hb_career_care_broker_profile', null);
+    if (profile && isDemoPartnerRecord(profile)) {
+      secureStore('hb_career_care_broker_profile', null);
+      setSavedRegistration(null);
+    }
+  }, []);
 
   if (!isOpen) return null;
 
@@ -303,11 +322,9 @@ export const CareerCareModal: React.FC<CareerCareModalProps> = ({
     try {
       secureStore('hb_career_care_broker_profile', newRegistration);
       
-      // Also add to broker list securely (filtering legacy demo IDs)
+      // Also add to broker list securely (strictly filtering demo IDs)
       const existingList = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
-      const cleanList = existingList.filter(
-        (b) => !b.id.includes('HB-PARTNER') && !b.id.toLowerCase().includes('demo')
-      );
+      const cleanList = existingList.filter((b) => !isDemoPartnerRecord(b));
       secureStore('hb_career_care_all_brokers', [newRegistration, ...cleanList]);
     } catch (err) {
       console.error(err);

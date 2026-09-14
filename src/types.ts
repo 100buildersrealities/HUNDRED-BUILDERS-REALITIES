@@ -1,4 +1,4 @@
-export type PurposeType = 'buy' | 'rent' | 'commercial' | 'plot' | 'agriculture' | 'lease';
+export type PurposeType = 'all' | 'buy' | 'rent' | 'commercial' | 'plot' | 'agriculture' | 'lease';
 
 export type PropertyCategory = 
   | 'apartment' 

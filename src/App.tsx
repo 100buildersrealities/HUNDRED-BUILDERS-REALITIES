@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Building2, 
   Sparkles, 
@@ -13,11 +13,15 @@ import {
   PhoneCall, 
   MapPin, 
   Search, 
-  CalendarCheck,
-  TrendingUp,
-  X,
-  Megaphone,
-  Home
+  CalendarCheck, 
+  TrendingUp, 
+  X, 
+  Megaphone, 
+  Home,
+  UserCheck,
+  Briefcase,
+  LayoutGrid,
+  RefreshCw
 } from 'lucide-react';
 import { 
   Property, 
@@ -113,22 +117,23 @@ export default function App() {
     setToastMessage(lang === 'hi' ? 'आप सफलतापूर्वक लॉगआउट हो चुके हैं।' : 'You have been logged out.');
   };
 
-  // Properties State (loads user-added listings with tamper-evident secure storage)
+  // Properties State (loads user-added listings and baseline genuine listings with tamper-evident secure storage)
   const [properties, setProperties] = useState<Property[]>(() => {
+    const deletedIds = secureRetrieve<string[]>('hb_deleted_property_ids', []) || [];
     try {
-      const deletedIds = secureRetrieve<string[]>('hb_deleted_property_ids', []) || [];
       const saved = secureRetrieve<Property[] | null>('hb_realities_properties', null);
-      let list: Property[] = [];
-      if (saved && Array.isArray(saved)) {
-        // Retain only genuine user listings and filter out any legacy demo properties (starting with 'hb-')
-        list = saved.filter((p: Property) => p && p.id && !p.id.startsWith('hb-'));
+      if (saved && Array.isArray(saved) && saved.length > 0) {
+        const list = saved.filter((p: Property) => p && p.id && !p.id.startsWith('hb-') && !deletedIds.includes(p.id));
+        if (list.length > 0) return list;
       }
-      return list.filter(p => !deletedIds.includes(p.id));
     } catch (e) {
       console.error(e);
     }
-    return [];
+    // Baseline seed properties so user immediately sees Owner, Agent, Builder, and Broker listings
+    return initialProperties.filter(p => !deletedIds.includes(p.id));
   });
+
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   // Shortlisted Properties IDs (tamper-evident storage)
   const [shortlistIds, setShortlistIds] = useState<string[]>(() => {
@@ -144,9 +149,9 @@ export default function App() {
     return secureRetrieve<SiteVisitBooking[]>('hb_site_visits', []);
   });
 
-  // Filter State
+  // Filter State (defaults to 'all' so every visitor immediately sees all listings across all roles)
   const [filters, setFilters] = useState<FilterState>({
-    purpose: 'buy',
+    purpose: 'all',
     city: 'All Cities',
     searchQuery: '',
     category: 'all',
@@ -214,6 +219,10 @@ export default function App() {
       console.error(e);
     }
 
+    // Sync deletion to central server
+    fetch(`/api/properties/${propertyId}`, { method: 'DELETE' })
+      .catch(err => console.warn('[Sync] Delete error:', err));
+
     if (selectedProperty?.id === propertyId) {
       setSelectedProperty(null);
     }
@@ -236,11 +245,68 @@ export default function App() {
     );
   };
 
+  // Central Server synchronization: Fetch all properties so every user sees all listings
+  const fetchPropertiesFromServer = useCallback(async () => {
+    try {
+      setIsSyncing(true);
+      const res = await fetch('/api/properties');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const deletedIds = secureRetrieve<string[]>('hb_deleted_property_ids', []) || [];
+          const validList = data.filter((p: Property) => p && p.id && !p.id.startsWith('hb-') && !deletedIds.includes(p.id));
+          if (validList.length > 0) {
+            setProperties(validList);
+            secureStore('hb_realities_properties', validList);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Sync] Fallback to secure storage', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  // Sync on mount and periodically every 15 seconds so new properties posted by any user appear automatically
+  useEffect(() => {
+    fetchPropertiesFromServer();
+
+    // Two-way sync: merge any local listings created offline
+    try {
+      const saved = secureRetrieve<Property[] | null>('hb_realities_properties', null);
+      if (saved && Array.isArray(saved) && saved.length > 0) {
+        fetch('/api/properties/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientProperties: saved }),
+        })
+          .then(res => res.json())
+          .then(result => {
+            if (result.success && Array.isArray(result.properties)) {
+              const deletedIds = secureRetrieve<string[]>('hb_deleted_property_ids', []) || [];
+              const validList = result.properties.filter((p: Property) => p && p.id && !p.id.startsWith('hb-') && !deletedIds.includes(p.id));
+              setProperties(validList);
+              secureStore('hb_realities_properties', validList);
+            }
+          })
+          .catch(() => {});
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const interval = setInterval(() => {
+      fetchPropertiesFromServer();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [fetchPropertiesFromServer]);
+
   // Save to secureStorage when properties change
   useEffect(() => {
     try {
-      const userAdded = properties.filter(p => p.id.startsWith('user-'));
-      secureStore('hb_realities_properties', userAdded);
+      secureStore('hb_realities_properties', properties);
     } catch (e) {
       console.error(e);
     }
@@ -324,11 +390,28 @@ export default function App() {
   };
 
   const handleAddProperty = (newProp: Property) => {
+    // 1. Immediately update UI state so listing appears instantly for the user
     setProperties((prev) => [newProp, ...prev]);
     setIsPostPropertyOpen(false);
     setEditingProperty(null);
     showToast(t.listingSuccessMsg);
     setSelectedProperty(newProp);
+
+    // 2. Publish to Central Server so ALL users, browsers, and app instances see it immediately
+    fetch('/api/properties', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProp),
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && result.property) {
+          console.log('[Central Server] Published property live:', result.property.id);
+        }
+      })
+      .catch(err => {
+        console.warn('[Central Server] Published locally; server sync queued:', err);
+      });
   };
 
   const handleEditProperty = (property: Property) => {
@@ -349,6 +432,13 @@ export default function App() {
     setEditingProperty(null);
     setIsPostPropertyOpen(false);
 
+    // Sync to server
+    fetch(`/api/properties/${updatedProp.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedProp),
+    }).catch(err => console.warn('[Sync] Update error:', err));
+
     const propName = lang === 'hi' ? updatedProp.titleHi : updatedProp.title;
     showToast(
       lang === 'hi'
@@ -368,11 +458,28 @@ export default function App() {
     setSiteVisits((prev) => prev.filter(b => b.id !== id));
   };
 
+  // Real-time counts across the 4 primary posting roles:
+  // 1. मालिक (Owner - 0% ब्रोकरेज)
+  // 2. वेरिफाइड एजेंट (Verified Agent)
+  // 3. हंड्रेड बिल्डर्स (Hundred Builders)
+  // 4. रजिस्टर्ड ब्रोकर (Registered Broker)
+  const roleCounts = useMemo(() => {
+    return {
+      all: properties.length,
+      owner: properties.filter(p => p.listedBy === 'owner').length,
+      verified_agent: properties.filter(p => p.listedBy === 'verified_agent').length,
+      hundred_builders: properties.filter(p => p.listedBy === 'hundred_builders').length,
+      registered_broker: properties.filter(p => p.listedBy === 'registered_broker').length,
+    };
+  }, [properties]);
+
   // Filtered & Sorted Properties computation
   const filteredProperties = useMemo(() => {
     return properties.filter((prop) => {
       // Purpose match
-      if (filters.purpose === 'agriculture') {
+      if (filters.purpose === 'all') {
+        // Show all listed properties from everyone!
+      } else if (filters.purpose === 'agriculture') {
         if (prop.purpose !== 'agriculture' && prop.category !== 'agricultural_land') return false;
       } else if (filters.purpose === 'lease') {
         if (prop.purpose !== 'lease') return false;
@@ -564,14 +671,14 @@ export default function App() {
       <main id="property-catalog-section" className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         
         {/* Section Top Controls (Title, Filter Pills, View Mode Switcher, Sorting) */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200/80 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 mb-4">
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 {filters.city !== 'All Cities' ? `${filters.city} - ` : ''}
-                {lang === 'hi' 
-                  ? `${t[filters.purpose]} के लिए उपलब्ध प्रॉपर्टीज` 
-                  : `Properties for ${t[filters.purpose]}`}
+                {filters.purpose === 'all'
+                  ? (lang === 'hi' ? 'सभी लिस्टेड प्रॉपर्टीज (All Listed Properties)' : 'All Listed Properties')
+                  : (lang === 'hi' ? `${t[filters.purpose] || filters.purpose} के लिए उपलब्ध प्रॉपर्टीज` : `Properties for ${t[filters.purpose] || filters.purpose}`)}
               </h2>
               <span className="bg-amber-100 text-amber-800 text-xs font-black px-2.5 py-0.5 rounded-full">
                 {filteredProperties.length}
@@ -579,8 +686,8 @@ export default function App() {
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {lang === 'hi' 
-                ? 'वेरिफाइड ओनर व हंड्रेड बिल्डर्स प्रोजेक्ट्स से सीधी बातचीत' 
-                : 'Verified listings with direct owner contact and Hundred Builders exclusive developments'}
+                ? 'मालिक (0% ब्रोकरेज), वेरिफाइड एजेंट, हंड्रेड बिल्डर्स और रजिस्टर्ड ब्रोकर की लाइव संपत्तियां' 
+                : 'Live listings from Owners (0% Brokerage), Verified Agents, Hundred Builders, and Registered Brokers'}
             </p>
           </div>
 
@@ -634,6 +741,109 @@ export default function App() {
               </button>
             </div>
 
+          </div>
+        </div>
+
+        {/* Quick Role Categories Tabs & Live Sync indicator */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <button
+              id="role-filter-all"
+              onClick={() => setFilters(prev => ({ ...prev, listedBy: [] }))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
+                filters.listedBy.length === 0
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>{lang === 'hi' ? 'सभी संपत्तियां' : 'All Properties'}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filters.listedBy.length === 0 ? 'bg-slate-700 text-amber-300' : 'bg-slate-100 text-slate-600'}`}>
+                {roleCounts.all}
+              </span>
+            </button>
+
+            <button
+              id="role-filter-owner"
+              onClick={() => setFilters(prev => ({ ...prev, listedBy: prev.listedBy.includes('owner') && prev.listedBy.length === 1 ? [] : ['owner'] }))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
+                filters.listedBy.includes('owner') && filters.listedBy.length === 1
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-emerald-50/80 text-emerald-800 border border-emerald-200 hover:bg-emerald-100/60'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
+              <span>{lang === 'hi' ? 'मालिक (Owner - 0% ब्रोकरेज)' : 'Direct Owner (0% Brokerage)'}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-black bg-white text-emerald-800 border border-emerald-200">
+                {roleCounts.owner}
+              </span>
+            </button>
+
+            <button
+              id="role-filter-agent"
+              onClick={() => setFilters(prev => ({ ...prev, listedBy: prev.listedBy.includes('verified_agent') && prev.listedBy.length === 1 ? [] : ['verified_agent'] }))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
+                filters.listedBy.includes('verified_agent') && filters.listedBy.length === 1
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-blue-50/80 text-blue-800 border border-blue-200 hover:bg-blue-100/60'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
+              <span>{lang === 'hi' ? 'वेरिफाइड एजेंट (Verified Agent)' : 'Verified Agent'}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-black bg-white text-blue-800 border border-blue-200">
+                {roleCounts.verified_agent}
+              </span>
+            </button>
+
+            <button
+              id="role-filter-builder"
+              onClick={() => setFilters(prev => ({ ...prev, listedBy: prev.listedBy.includes('hundred_builders') && prev.listedBy.length === 1 ? [] : ['hundred_builders'] }))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
+                filters.listedBy.includes('hundred_builders') && filters.listedBy.length === 1
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-amber-50/80 text-amber-900 border border-amber-200 hover:bg-amber-100/60'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-amber-700" />
+              <span>{lang === 'hi' ? 'हंड्रेड बिल्डर्स (100 Builders)' : '100 Builders Official'}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-black bg-white text-amber-900 border border-amber-200">
+                {roleCounts.hundred_builders}
+              </span>
+            </button>
+
+            <button
+              id="role-filter-broker"
+              onClick={() => setFilters(prev => ({ ...prev, listedBy: prev.listedBy.includes('registered_broker') && prev.listedBy.length === 1 ? [] : ['registered_broker'] }))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
+                filters.listedBy.includes('registered_broker') && filters.listedBy.length === 1
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-purple-50/80 text-purple-800 border border-purple-200 hover:bg-purple-100/60'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5 text-purple-700" />
+              <span>{lang === 'hi' ? 'रजिस्टर्ड ब्रोकर (Registered Broker)' : 'Registered Broker'}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-black bg-white text-purple-800 border border-purple-200">
+                {roleCounts.registered_broker}
+              </span>
+            </button>
+          </div>
+
+          {/* Real-time sync badge */}
+          <div className="flex items-center space-x-2 shrink-0">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span>{lang === 'hi' ? 'लाइव सिंक • तुरंत सभी यूजर्स को दृश्यमान' : 'Live Sync • Immediately Visible to All'}</span>
+            </div>
+            <button
+              onClick={() => {
+                fetchPropertiesFromServer();
+                showToast(lang === 'hi' ? 'सभी नई लिस्टिंग्स रीफ्रेश कर ली गई हैं।' : 'Properties refreshed.');
+              }}
+              className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 cursor-pointer transition shadow-2xs"
+              title="Refresh Listings"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-600' : ''}`} />
+            </button>
           </div>
         </div>
 

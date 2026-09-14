@@ -41,105 +41,28 @@ interface CareerCareCorporateManagerProps {
   onPartnerUpdated?: (partner: BrokerRegistration) => void;
 }
 
-// Initial genuine seed partner applications if none stored yet
-const INITIAL_SEED_PARTNERS: BrokerRegistration[] = [
-  {
-    id: 'HBR-BRK-2026-4819',
-    fullName: 'मनोज कुमार अग्रवाल',
-    fatherName: 'श्री रामेश्वर अग्रवाल',
-    gender: 'male',
-    phone: '98271-88450',
-    whatsappNumber: '98271-88450',
-    email: 'manoj.realty.cgrera@gmail.com',
-    currentAddress: 'वार्ड 24, सिविल लाइंस, शंकर नगर',
-    permanentAddress: 'वार्ड 24, सिविल लाइंस, शंकर नगर',
-    city: 'Raipur',
-    district: 'Raipur',
-    state: 'Chhattisgarh',
-    pincode: '492001',
-    aadhaarNumber: '7845-9201-3847',
-    panNumber: 'BPA8921K',
-    drivingLicenseNumber: 'CG04-2018-004819',
-    reraNumber: 'CGRERA-B-2024-00192',
-    experienceYears: '5-10 years',
-    operatingAreas: 'रायपुर, नया रायपुर, वीआईपी रोड, सेजबहार',
-    specialization: ['Residential Plots / Township Land', 'Luxury Villas & Independent Houses'],
-    agencyName: 'अग्रवाल प्रॉपर्टी कंसल्टेंट्स',
-    bankName: 'State Bank of India (SBI)',
-    accountHolderName: 'Manoj Kumar Agrawal',
-    accountNumber: '38190021482',
-    ifscCode: 'SBIN0000461',
-    upiId: '9827188450@sbi',
-    registeredAt: '12 मार्च 2026',
-    status: 'under_review',
-    activationStatus: 'pending',
-  },
-  {
-    id: 'HBR-BRK-2026-3105',
-    fullName: 'आशीष देवांगन',
-    fatherName: 'श्री सुरेश देवांगन',
-    gender: 'male',
-    phone: '94252-73105',
-    whatsappNumber: '94252-73105',
-    email: 'ashish.dewangan.durg@yahoo.com',
-    currentAddress: 'पद्मनाभपुर, जेल रोड, दुर्ग',
-    permanentAddress: 'पद्मनाभपुर, जेल रोड, दुर्ग',
-    city: 'Durg',
-    district: 'Durg',
-    state: 'Chhattisgarh',
-    pincode: '491001',
-    aadhaarNumber: '6192-3481-9024',
-    panNumber: 'ABDP8912M',
-    drivingLicenseNumber: 'CG07-2020-003105',
-    reraNumber: 'CGRERA-B-2023-00088',
-    experienceYears: '3-5 years',
-    operatingAreas: 'दुर्ग-भिलाई, नेवई, कुम्हारी, उतई',
-    specialization: ['Residential Flats / Apartments', 'Plots / Land'],
-    agencyName: 'देवांगन एसोसिएट्स दुर्ग',
-    bankName: 'HDFC Bank',
-    accountHolderName: 'Ashish Dewangan',
-    accountNumber: '5010029481920',
-    ifscCode: 'HDFC0001092',
-    upiId: 'ashishdewangan@okhdfcbank',
-    registeredAt: '10 मार्च 2026',
-    status: 'verified_active',
-    activationStatus: 'activated',
-    activatedAt: '11 मार्च 2026',
-    activatedBy: '100 BUILDERS REALITIES हेड ऑफिस',
-    corporateSealId: 'HBR-CORP-SEAL-94821',
-  },
-  {
-    id: 'HBR-BRK-2026-7241',
-    fullName: 'सुनील कुमार वर्मा',
-    fatherName: 'श्री हरिशंकर वर्मा',
-    gender: 'male',
-    phone: '88390-17241',
-    whatsappNumber: '88390-17241',
-    email: 'sunilverma.realtor@gmail.com',
-    currentAddress: 'लिंक रोड, तारबाहर, बिलासपुर',
-    permanentAddress: 'लिंक रोड, तारबाहर, बिलासपुर',
-    city: 'Bilaspur',
-    district: 'Bilaspur',
-    state: 'Chhattisgarh',
-    pincode: '495001',
-    aadhaarNumber: '9012-7845-6321',
-    panNumber: 'CPV7812L',
-    drivingLicenseNumber: 'CG10-2019-007241',
-    reraNumber: '',
-    experienceYears: '1-3 years',
-    operatingAreas: 'बिलासपुर, तिफरा, सिरगिट्टी, सकरी',
-    specialization: ['Residential Plots / Township Land', 'Commercial Office & Retail Shops'],
-    agencyName: 'वर्मा प्रॉपर्टी एडवाइजरी',
-    bankName: 'Bank of Baroda',
-    accountHolderName: 'Sunil Kumar Verma',
-    accountNumber: '28410200008912',
-    ifscCode: 'BARB0BILASP',
-    upiId: '8839017241@barodampay',
-    registeredAt: '13 मार्च 2026',
-    status: 'under_review',
-    activationStatus: 'pending',
-  }
+// List of known demo partner IDs to completely purge from the entire portal
+export const DEMO_PARTNER_IDS = [
+  'HBR-BRK-2026-4819',
+  'HBR-BRK-2026-3105',
+  'HBR-BRK-2026-7241',
 ];
+
+export const isDemoPartnerRecord = (partner?: { id?: string; fullName?: string } | null): boolean => {
+  if (!partner || !partner.id) return true;
+  const idUpper = partner.id.toUpperCase();
+  const nameLower = (partner.fullName || '').toLowerCase();
+  return (
+    DEMO_PARTNER_IDS.includes(partner.id) ||
+    idUpper.includes('DEMO') ||
+    idUpper.includes('HB-PARTNER') ||
+    nameLower.includes('demo') ||
+    nameLower.includes('डेमो')
+  );
+};
+
+// Initial genuine seed partner applications - empty by default (no demo partners allowed)
+const INITIAL_SEED_PARTNERS: BrokerRegistration[] = [];
 
 export const CareerCareCorporateManager: React.FC<CareerCareCorporateManagerProps> = ({
   lang,
@@ -149,21 +72,13 @@ export const CareerCareCorporateManager: React.FC<CareerCareCorporateManagerProp
 }) => {
   const isHi = lang === 'hi';
 
-  // Load registered partners (strictly filter out any legacy demo codes)
+  // Load registered partners (strictly filter out any demo codes)
   const [partners, setPartners] = useState<BrokerRegistration[]>(() => {
     const saved = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
-    if (saved && saved.length > 0) {
-      const cleanList = saved.filter(
-        (p) => !p.id.includes('HB-PARTNER') && !p.id.toLowerCase().includes('demo')
-      );
-      if (cleanList.length !== saved.length) {
-        secureStore('hb_career_care_all_brokers', cleanList);
-      }
-      return cleanList.length > 0 ? cleanList : INITIAL_SEED_PARTNERS;
-    }
-    // Seed initial list if none exists
-    secureStore('hb_career_care_all_brokers', INITIAL_SEED_PARTNERS);
-    return INITIAL_SEED_PARTNERS;
+    const cleanList = (saved || []).filter((p) => !isDemoPartnerRecord(p));
+    // Persist cleaned list without any demo codes
+    secureStore('hb_career_care_all_brokers', cleanList);
+    return cleanList;
   });
 
   // UI States
@@ -182,15 +97,24 @@ export const CareerCareCorporateManager: React.FC<CareerCareCorporateManagerProp
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [sharingPartner, setSharingPartner] = useState<BrokerRegistration | null>(null);
 
-  // Sync with storage on mount or refresh
+  // Sync with storage on mount or refresh, strictly purging demo partners
   const reloadPartners = () => {
     const saved = secureRetrieve<BrokerRegistration[]>('hb_career_care_all_brokers', []);
-    if (saved && saved.length > 0) {
-      const cleanList = saved.filter(
-        (p) => !p.id.includes('HB-PARTNER') && !p.id.toLowerCase().includes('demo')
-      );
-      setPartners(cleanList.length > 0 ? cleanList : INITIAL_SEED_PARTNERS);
+    const cleanList = (saved || []).filter((p) => !isDemoPartnerRecord(p));
+    secureStore('hb_career_care_all_brokers', cleanList);
+    
+    // Also clean single profile if it was a demo
+    const currentProfile = secureRetrieve<BrokerRegistration | null>('hb_career_care_broker_profile', null);
+    if (currentProfile && isDemoPartnerRecord(currentProfile)) {
+      secureStore('hb_career_care_broker_profile', null);
     }
+
+    setPartners(cleanList);
+  };
+
+  const handlePurgeAllDemoPartners = () => {
+    reloadPartners();
+    showToast('पोर्टल से सभी डेमो पार्टनर्स का कोड पूर्णतः हटा दिया गया है!');
   };
 
   useEffect(() => {
@@ -606,14 +530,27 @@ export const CareerCareCorporateManager: React.FC<CareerCareCorporateManagerProp
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={reloadPartners}
-          className="self-start md:self-auto px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-slate-200 flex items-center space-x-1.5 transition cursor-pointer"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>रिफ्रेश लिस्ट</span>
-        </button>
+        <div className="flex items-center space-x-2 self-start md:self-auto">
+          <button
+            type="button"
+            id="btn-purge-demo-partners"
+            onClick={handlePurgeAllDemoPartners}
+            className="px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/40 text-xs font-bold text-rose-200 flex items-center space-x-1.5 transition cursor-pointer"
+            title="पोर्टल से सभी डेमो कोड्स पूर्णतः हटाएं"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-rose-300" />
+            <span>डेमो कोड्स पूर्णतः साफ करें</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={reloadPartners}
+            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-slate-200 flex items-center space-x-1.5 transition cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>रिफ्रेश लिस्ट</span>
+          </button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -686,7 +623,7 @@ export const CareerCareCorporateManager: React.FC<CareerCareCorporateManagerProp
               filterStatus === 'activated' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
             }`}
           >
-            <CheckCircle2 className="w-3 h-3" />
+            <CheckCircle2 className="w-3.5 h-3.5" />
             <span>सक्रिय ({activatedCount})</span>
           </button>
         </div>
@@ -695,8 +632,16 @@ export const CareerCareCorporateManager: React.FC<CareerCareCorporateManagerProp
       {/* Partners List / Dossiers */}
       <div className="space-y-4">
         {filteredPartners.length === 0 ? (
-          <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs">
-            कोई एसोसिएट पार्टनर रिकॉर्ड नहीं मिला।
+          <div className="p-10 text-center bg-white rounded-2xl border-2 border-dashed border-slate-300 text-slate-600 space-y-3 shadow-2xs">
+            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full flex items-center justify-center mx-auto shadow-2xs">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h4 className="text-base font-black text-slate-900">
+              सभी डेमो पार्टनर्स के कोड पूर्णतः हटा दिए गए हैं
+            </h4>
+            <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
+              पोर्टल में अब कोई भी डेमो कोड अथवा अप्रमाणित पार्टनर रिकॉर्ड मौजूद नहीं है। जब नए एसोसिएट पार्टनर करियर केयर पोर्टल (Career Care Portal) पर पंजीकरण करेंगे, उनके वास्तविक आवेदन यहाँ अधिकृत सक्रियण (Activation) एवं विवरण साझा करने हेतु प्रदर्शित होंगे।
+            </p>
           </div>
         ) : (
           filteredPartners.map((partner) => {
